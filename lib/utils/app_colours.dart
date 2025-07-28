@@ -1,0 +1,45 @@
+import 'package:flutter/material.dart';
+
+class AppColors {
+  static const Color primaryColor = const Color(0XFFFD5901);
+  static Color black65 = Colors.black.withOpacity(0.65);
+  static Color purewhite = const Color(0xFFFFFF);
+  static Color black45 = Colors.black45;
+  static Color whiteColor = const Color(0xFFFFFFFF);
+  static Color veryLightRedColor = const Color(0xFFEFEEEE);
+  static Color white60Color = Colors.white60;
+  static Color greyLightColor = const Color(0xFFEEEEEE);
+  static Color gray85Color = const Color(0xFFd9d9d9);
+  static Color doveGreyColor = const Color(0xFF6C6666);
+  static Color whitesmokeColor = const Color(0xFFF5F5F5);
+  static Color charcoalColor = const Color(0xFF333333);
+  static Color iconColor = const Color(0xFFBDBBBB);
+  static Color transparentColor = Colors.transparent;
+  static Color blackColor = const Color(0xFF000000);
+  static Color gray4Color = const Color(0xFF0a0a0a);
+  static Color grey1Color = Colors.grey.shade100;
+  static Color grey2Color = Colors.grey.shade200;
+  static Color grey3Color = Colors.grey.shade300;
+  static Color grey4Color = Colors.grey.shade400;
+  static Color grey5Color = Colors.grey.shade500;
+  static Color grey6Color = Colors.grey.shade600;
+  static Color dividerColor = const Color(0xFF756A6A);
+  static Color greenColor = const Color(0xFF62C32D);
+  static Color lightGreenColor = const Color(0xFF0CFF00);
+  static Color darkGreenColor = const Color(0xFF089002);
+  static Color limaGreenColor = const Color(0xFF25C00C);
+  static Color redColor = const Color(0xFFFF0000);
+  static Color darkRedColor = const Color(0xFF8F0202);
+  static Color yellowColor = Colors.yellow;
+  static Color orange = Colors.orange.shade700;
+  static Color lightYellowColor = const Color(0xFFFFE404);
+  static Color mediumBlueColor = const Color(0xFF4988FD);
+  static Color lightBlueColor = const Color(0xFFADD8E6);
+  static Color lightBlue1Color = const Color(0xFF4988FD);
+  static Color dividerColor1 = const Color(0xFFAEABAB);
+  static Color dropDownBorderColor = const Color(0xFFF2EBEB);
+  static Color dropDownFillColor = const Color(0xFFF5F5F5);
+  static Color matterHornColor = const Color(0xFF4E4C4C);
+  static Color cyanColor = Colors.cyan;
+  static Color gold1Color = Color(0xFFffd70029);
+}
