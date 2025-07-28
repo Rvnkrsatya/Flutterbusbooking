@@ -4,8 +4,19 @@ import 'package:collection/collection.dart';
 
 class SrsSeatLayoutWidget extends StatelessWidget {
   final List<SrsSeat> seats;
+  final List<SrsSeat> selectedSeats;
+  final String? selectedPrice;
+  final Function(SrsSeat) onSeatTap;
+  final Function(String?) onPriceSelected;
 
-  const SrsSeatLayoutWidget({super.key, required this.seats});
+  const SrsSeatLayoutWidget({
+    super.key,
+    required this.seats,
+    required this.selectedSeats,
+    required this.selectedPrice,
+    required this.onSeatTap,
+    required this.onPriceSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +29,7 @@ class SrsSeatLayoutWidget extends StatelessWidget {
     const Color lightBlue = Color(0xFF14bde3);
 
     final allCosts = seats
-        .map((s) => s.cost?.split('.').first) // get just the integer part
+        .map((s) => s.cost?.split('.').first)
         .where((c) => c != null && c.isNotEmpty)
         .toSet()
         .toList()
@@ -30,9 +41,9 @@ class SrsSeatLayoutWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.fromLTRB(20.0, 12.0, 12.0, 12.0), // left, top, right, bottom
+          padding: EdgeInsets.fromLTRB(20.0, 12.0, 12.0, 12.0),
           child: Align(
-            alignment: Alignment.centerLeft, // 👈 aligns to the left
+            alignment: Alignment.centerLeft,
             child: Text(
               "Seat Layout",
               style: TextStyle(
@@ -43,8 +54,6 @@ class SrsSeatLayoutWidget extends StatelessWidget {
             ),
           ),
         ),
-
-        // 🟦 Filter Chips Row
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12.0),
           child: Wrap(
@@ -52,31 +61,24 @@ class SrsSeatLayoutWidget extends StatelessWidget {
             runSpacing: 8.0,
             children: allCosts.map((price) {
               return ChoiceChip(
-                label: Text("₹$price"),
-                selected: false, // Implement logic as needed
-                onSelected: (_) {
-                  // Handle filter selection logic
-                },
-                selectedColor: Color(0xFF14bde3), // light blue when selected
-                backgroundColor: Color(0xFFE0F7FA), // light background
+                label: Text(price == "All" ? "All" : "₹$price"),
+                selected: (selectedPrice == null && price == "All") || selectedPrice == price,
+                onSelected: (_) => onPriceSelected(price == "All" ? null : price),
+                selectedColor: lightBlue,
+                backgroundColor: const Color(0xFFE0F7FA),
                 labelStyle: const TextStyle(
-                  color: Color(0xFF033564), // dark blue label
+                  color: darkBlue,
                   fontWeight: FontWeight.w500,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6), // 💡 slight corner curve
-                  side: const BorderSide(
-                    color: Color(0xFF033564), // dark blue border
-                    width: 1.2,
-                  ),
+                  borderRadius: BorderRadius.circular(6),
+                  side: const BorderSide(color: darkBlue, width: 1.2),
                 ),
               );
             }).toList(),
           ),
         ),
-
         const SizedBox(height: 8),
-        // 🔽 Seat Layout Scroll Area
         Expanded(
           child: SingleChildScrollView(
             scrollDirection: Axis.vertical,
@@ -103,11 +105,9 @@ class SrsSeatLayoutWidget extends StatelessWidget {
     );
   }
 
-
   Widget _buildTier(String title, List<SrsSeat> sleeperSeats, List<SrsSeat> seaterSeats) {
     final sleeperRows = _groupSeatsByRow(sleeperSeats);
     final sleeperRowCount = sleeperRows.length;
-
     const Color darkBlue = Color(0xFF033564);
 
     return Container(
@@ -124,20 +124,12 @@ class SrsSeatLayoutWidget extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: darkBlue,
-                ),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkBlue),
               ),
-              if (title.contains("Lower")) ...[
+              if (title.contains("Lower"))
                 const SizedBox(width: 8),
-                Image.asset(
-                  'assets/images/seat_types/driver.png',
-                  width: 30,
-                  height: 30,
-                ),
-              ],
+              if (title.contains("Lower"))
+                Image.asset('assets/images/seat_types/driver.png', width: 30, height: 30),
             ],
           ),
           const SizedBox(height: 8),
@@ -145,18 +137,13 @@ class SrsSeatLayoutWidget extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (seaterSeats.isNotEmpty) ...[
-                Column(
-                  children: _buildSeaterColumn(seaterSeats, totalRows: sleeperRowCount),
-                ),
+                Column(children: _buildSeaterColumn(seaterSeats, totalRows: sleeperRowCount)),
                 SizedBox(width: title.contains("Lower") ? 16 : 0),
               ],
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: sleeperRows.entries.map((e) {
-                  return _buildSleeperRow(
-                    e.value,
-                    addGapAfterFirst: true, // 👈 only for upper tier
-                  );
+                  return _buildSleeperRow(e.value, addGapAfterFirst: true);
                 }).toList(),
               ),
             ],
@@ -166,10 +153,7 @@ class SrsSeatLayoutWidget extends StatelessWidget {
     );
   }
 
-
-
   Widget _buildSleeperRow(List<SrsSeat> rowSeats, {bool addGapAfterFirst = false}) {
-    // ✅ First, filter out the seats with empty image paths
     final visibleSeats = rowSeats.where((seat) => getImagePath(seat).isNotEmpty).toList();
 
     return Padding(
@@ -180,33 +164,52 @@ class SrsSeatLayoutWidget extends StatelessWidget {
           final index = entry.key;
           final seat = entry.value;
           final imagePath = getImagePath(seat);
+          final isSelected = selectedSeats.contains(seat);
 
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(2.0),
-                child: Column(
-                  children: [
-                    Image.asset(imagePath, width: 48, height: 74),
-                    const SizedBox(height: 2),
-                    Text(
-                      seat.isBooked ? "Sold" : "₹${seat.cost}",
-                      style: const TextStyle(fontSize: 11),
-                    ),
+          return GestureDetector(
+            onTap: seat.isBooked ? null : () => onSeatTap(seat),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(2.0),
+                  child: Column(
+                    children: [
+                      //Image.asset(imagePath, width: 48, height: 74),
+                      Container(
+                        decoration: _shouldHighlight(seat)
+                            ? BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x33033564), // subtle dark blue
+                              blurRadius: 2,
+                              spreadRadius: 0.1,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        )
+                            : null,
+                        child: Image.asset(imagePath, width: 48, height: 74),
+                      ),
 
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        seat.isBooked ? "Sold" : "₹${seat.cost}",
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              if (addGapAfterFirst && index == 0)
-                const SizedBox(width: 16), // 👈 spacing between first & second real column
-            ],
+                if (addGapAfterFirst && index == 0)
+                  const SizedBox(width: 16),
+              ],
+            ),
           );
         }).toList(),
       ),
     );
   }
-
 
   List<Widget> _buildSeaterColumn(List<SrsSeat> seaters, {required int totalRows}) {
     if (seaters.isEmpty) return [];
@@ -214,50 +217,59 @@ class SrsSeatLayoutWidget extends StatelessWidget {
     const double totalContainerHeight = 42.0;
     const double textHeight = 10.0;
     final double imageHeight = totalContainerHeight - textHeight;
-    return seaters.map((seat) {
-      final imagePath = getImagePath(seat);
-// Skip rendering entirely if it's a placeholder (e.g. .GY or --)
-      if (imagePath.isEmpty) {
-        return const SizedBox(
-          width: 0,
-          height: 10,
-          child: SizedBox.shrink(), // no image, no text, no padding
-        );
-      }
-      return SizedBox(
-        width: seaterWidth,
-        height: totalContainerHeight,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              imagePath,
-              width: seaterWidth,
-              height: imageHeight,
-              fit: BoxFit.contain,
-            ),
-            SizedBox(
-              height: textHeight,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: Text(
-                  seat.isBooked ? "Sold" : "₹${seat.cost}",
-                  style: const TextStyle(
-                    fontSize: 9,
-                    height: 1.0,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
 
+    return seaters.map((seat) {
+      final cost = seat.cost?.split(".").first;
+      final imagePath = getImagePath(seat);
+
+      if (imagePath.isEmpty) return const SizedBox(width: 0, height: 10);
+
+
+      return GestureDetector(
+        onTap: seat.isBooked ? null : () => onSeatTap(seat),
+        child: SizedBox(
+          width: seaterWidth,
+          height: totalContainerHeight,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              //Image.asset(imagePath, width: seaterWidth, height: imageHeight, fit: BoxFit.contain),
+              Container(
+                decoration: _shouldHighlight(seat)
+                    ? BoxDecoration(
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x33033564), // subtle dark blue
+                      blurRadius: 4,
+                      spreadRadius: 0.5,
+                      offset: Offset(0, 1),
+                    ),
+                  ],
+                )
+                    : null,
+                child: Image.asset(imagePath, width: seaterWidth, height: imageHeight, fit: BoxFit.contain),
               ),
-            ),
-          ],
+
+
+              SizedBox(
+                height: textHeight,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.center,
+                  child: Text(
+                    seat.isBooked ? "Sold" : "₹${seat.cost}",
+                    style: const TextStyle(fontSize: 9, height: 1.0),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }).toList();
   }
-
 
   Map<int, List<SrsSeat>> _groupSeatsByRow(List<SrsSeat> seats) {
     final map = <int, List<SrsSeat>>{};
@@ -281,8 +293,9 @@ class SrsSeatLayoutWidget extends StatelessWidget {
 
     final isSleeper = _isSleeper(seat);
     final isLadies = seat.isLadiesOnly;
+    final isSelected = selectedSeats.contains(seat);
 
-    if (seat.isSelected) {
+    if (isSelected) {
       return isSleeper
           ? 'assets/images/seat_types/sleeper_selected.png'
           : 'assets/images/seat_types/seater_selected.png';
@@ -311,4 +324,13 @@ class SrsSeatLayoutWidget extends StatelessWidget {
     }
     return '';
   }
+
+  bool _shouldHighlight(SrsSeat seat) {
+    if (selectedPrice == "All") return false;
+
+    final seatPrice = seat.cost?.split(".").first;
+    return seatPrice == selectedPrice;
+  }
+
+
 }

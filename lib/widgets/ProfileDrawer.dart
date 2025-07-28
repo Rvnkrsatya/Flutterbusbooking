@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
 import 'package:flutter_application_yesgobus/widgets/ContactUsScreen.dart';
+import 'package:flutter_application_yesgobus/widgets/Mybooking.dart';
 import 'package:flutter_application_yesgobus/widgets/TermsScreen.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../Pages/bus_list_page.dart';
 import '../screens/LoginPage.dart';
 import '../Service/appservice/api_urls.dart';
 import '../Service/appservice/get_store_data.dart';
@@ -135,8 +137,33 @@ class _ProfileDrawerState extends State<ProfileDrawer> {
 
           // 🔹 Drawer Options
           const DrawerButtonItem(icon: Icons.home, label: 'Home'),
-          const DrawerButtonItem(icon: Icons.bus_alert, label: 'Bus booking'),
-          const DrawerButtonItem(icon: Icons.work_history, label: 'My Booking'),
+          DrawerButtonItem(
+            icon: Icons.bus_alert,
+            label: 'Bus booking',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BusListPage(
+                    fromCity: "Karwar",           // Example values
+                    toCity: "Bangalore",
+                    selectedDate: DateTime.now(), // Replace with actual selected date
+                  ),
+                ),
+              );
+            },
+          ),
+
+          DrawerButtonItem(
+            icon: Icons.work_history,
+            label: 'My Booking',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const Mybooking()),
+              );
+            },
+          ),
 
           DrawerButtonItem(
             icon: Icons.contact_page,

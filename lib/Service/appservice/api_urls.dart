@@ -1,8 +1,8 @@
 
 
 class ApiUrls {
-  // static const String baseUrl = "https://apis.yesgobus.com/api/";
-  static const String baseUrl = "https://test.yesgobus.com/api/";  //testing
+  static const String baseUrl = "https://apis.yesgobus.com/api/";
+  // static const String baseUrl = "https://test.yesgobus.com/api/";  //testing
 
   static String searchCity(String query) =>
       "${baseUrl}busBooking/searchCity/$query";
@@ -26,12 +26,15 @@ class ApiUrls {
 
 
   static const String vrlbusdetails = "busBooking/getVrlBusDetails";
+
+  // static const String srsbusdetails = "busBooking/getSrsSchedules/hubli/bangalore/2025-07-28";
+
+
   static const String getVrlSeatLayout = "busBooking/sendVrlRequest/GetSeatArrangementDetailsV3";
   static const String getSrsSeatLayout = "busBooking/getSrsSeatDetails/";
-  static const String srsbusdetails = "busBooking/getSrsSchedules/hubli/bangalore/2025-07-28";
 
-
-
+  // ✅ Remove hardcoded cities/date — use base path
+  static const String srsbusdetailsBase = "busBooking/getSrsSchedules";
 
 }
 

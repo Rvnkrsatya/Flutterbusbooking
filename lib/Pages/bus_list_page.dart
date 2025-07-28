@@ -106,11 +106,15 @@ class _BusListPageState extends State<BusListPage> {
 
 
   Future<void> fetchSRSBuses() async {
-    debugPrint("🟡 SRS Request - From: ${widget.fromCity}, To: ${widget.toCity}, Date: ${DateFormat('yyyy-MM-dd').format(selectedDate)}");
+    final source = widget.fromCity.toLowerCase().trim();
+    final destination = widget.toCity.toLowerCase().trim();
+    final doj = DateFormat('yyyy-MM-dd').format(selectedDate);
 
-    final response = await ApiBase.getRequest(
-      extendedURL: "${ApiUrls.srsbusdetails}?source=${widget.fromCity.toLowerCase().trim()}&destination=${widget.toCity.toLowerCase().trim()}&doj=${DateFormat('yyyy-MM-dd').format(selectedDate)}",
-    );
+    final url = "${ApiUrls.srsbusdetailsBase}/$source/$destination/$doj";
+
+    debugPrint("🟡 SRS Request - $url");
+
+    final response = await ApiBase.getRequest(extendedURL: url);
 
     debugPrint("🟠 SRS Response Status: ${response.statusCode}");
     debugPrint("🟠 SRS Response Body: ${response.body}");

@@ -20,12 +20,34 @@ class SrsSeatLayoutPage extends StatefulWidget {
 
 class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
   List<SrsSeat> selectedSeats = [];
+  String selectedPrice = "All";
+
+  void toggleSeatSelection(SrsSeat seat) {
+    setState(() {
+      if (selectedSeats.contains(seat)) {
+        selectedSeats.remove(seat);
+        seat.isSelected = false;
+      } else {
+        selectedSeats.add(seat);
+        seat.isSelected = true;
+      }
+    });
+  }
+
+  void updatePriceFilter(String? value) {
+    setState(() {
+      selectedPrice = value ?? "All"; // set to "All" when null
+    });
+  }
+
 
   @override
   Widget build(BuildContext context) {
     final bus = widget.bus;
     final boardingList = bus.boardingStages;
     final droppingList = bus.dropoffStages;
+    print("🟢 Boarding Points: ${boardingList.map((e) => '${e.stage} at ${e.time}').toList()}");
+    print("🟢 Dropping Points: ${droppingList.map((e) => '${e.stage} at ${e.time}').toList()}");
 
     return Scaffold(
       appBar: AppBar(
@@ -36,7 +58,15 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
       body: Stack(
         children: [
           // Seat Layout
-          SrsSeatLayoutWidget(seats: widget.seats),
+          Positioned.fill(
+            child: SrsSeatLayoutWidget(
+              seats: widget.seats,
+              selectedPrice: selectedPrice,
+              selectedSeats: selectedSeats,
+              onSeatTap: toggleSeatSelection,
+              onPriceSelected: updatePriceFilter,
+            ),
+          ),
 
           // Bottom Draggable Sheet with Route, Boarding, Dropping
           DraggableScrollableSheet(
@@ -78,14 +108,14 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
                               children: [
                                 SingleChildScrollView(
                                   padding: const EdgeInsets.all(16),
-                                  controller: scrollController, // important 👈
+                                  controller: scrollController,
                                   child: ConstrainedBox(
                                     constraints: BoxConstraints(minHeight: constraints.maxHeight),
                                     child: _buildRouteTab(bus),
                                   ),
                                 ),
-                                _buildStageList(boardingList),
-                                _buildStageList(droppingList),
+                                _buildStageList(boardingList, scrollController, "Boarding Points"),
+                                _buildStageList(droppingList, scrollController, "Dropping Points"),
                               ],
                             ),
                           ),
@@ -127,7 +157,7 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
                                 fontWeight: FontWeight.w500,
                                 fontSize: 16,
                                 color: Color(0xFF033564))),
-                        Text("₹${seat.row?.toInt() ?? 0}",
+                        Text("₹${seat.cost?.split(".").first ?? '0'}",
                             style: const TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 16,
@@ -144,7 +174,7 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF033564))),
                         Text(
-                          "₹${selectedSeats.fold(0, (sum, s) => sum + (s.row?.toInt() ?? 0))}",
+                          "₹${selectedSeats.fold(0, (sum, s) => sum + int.tryParse(s.cost?.split(".").first ?? '0')!)}",
                           style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
@@ -186,8 +216,7 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF033564),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -211,23 +240,19 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
           children: [
             Column(
               children: [
-                const Icon(Icons.location_on,
-                    color: Color(0xFF14bde3), size: 28),
+                const Icon(Icons.location_on, color: Color(0xFF14bde3), size: 28),
                 const SizedBox(height: 4),
-                const Text("Departure",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("Departure", style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(bus.depTime),
               ],
             ),
-            const Icon(Icons.directions_bus,
-                color: Color(0xFF033564), size: 28),
+            const Icon(Icons.directions_bus, color: Color(0xFF033564), size: 28),
             Column(
               children: [
                 const Icon(Icons.flag, color: Color(0xFF14bde3), size: 28),
                 const SizedBox(height: 4),
-                const Text("Arrival",
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("Arrival", style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text(bus.arrTime),
               ],
@@ -243,35 +268,95 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
     );
   }
 
-  Widget _buildStageList(List<StagePoint> stages) {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: stages.length,
+  Widget _buildStageList(List<StagePoint> stages, ScrollController controller, String title) {
+    return ListView.separated(
+      controller: controller,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      itemCount: stages.length + 1, // +1 for the title
+      separatorBuilder: (_, index) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final stage = stages[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          child: Row(
-            children: [
-              const Icon(Icons.location_on, color: Color(0xFF14bde3)),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(stage.time,
-                        style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.bold)),
-                    Text(stage.stage,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
-                  ],
+        if (index == 0) {
+          // Heading
+          return Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF033564),
+            ),
+          );
+        }
+
+        final stage = stages[index - 1];
+        final isLast = index == stages.length;
+        final timeFormatted = _formatTime(stage.time);
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Column(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF14bde3),
+                    shape: BoxShape.circle,
+                  ),
                 ),
+                if (!isLast)
+                  Container(
+                    width: 2,
+                    height: 40,
+                    color: Colors.grey[300],
+                  ),
+              ],
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    timeFormatted,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    stage.stage,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
   }
+
+
+  String _formatTime(String time24) {
+    try {
+      final time = TimeOfDay(
+        hour: int.parse(time24.split(':')[0]),
+        minute: int.parse(time24.split(':')[1]),
+      );
+      final now = DateTime.now();
+      final dt = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+      final formatted = TimeOfDay.fromDateTime(dt).format(context);
+      return formatted;
+    } catch (e) {
+      return time24; // fallback if parsing fails
+    }
+  }
+
 }
