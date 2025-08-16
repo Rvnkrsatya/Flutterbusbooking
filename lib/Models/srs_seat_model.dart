@@ -11,7 +11,9 @@ class SrsSeat {
   bool isSelected;
   final int row;
   final int column;
-  final String cost; // 💰 New field
+  final String cost;
+  final String originId;
+  final String destinationId;
 
   SrsSeat({
     required this.seatId,
@@ -25,7 +27,9 @@ class SrsSeat {
     required this.isUpper,
     required this.row,
     required this.column,
-    required this.cost, // 💰 add to constructor
+    required this.cost,
+    required this.originId,
+    required this.destinationId,
     this.isSelected = false,
   });
 
@@ -37,28 +41,30 @@ class SrsSeat {
     Set<String>? ladiesBookedSet,
     required int row,
     required int col,
-    required Map<String, String> seatCostMap, // 💰 New map (e.g., {'LB': '550', 'ST': '450'})
+    required Map<String, String> seatCostMap,
+    required String originId,
+    required String destinationId,
   }) {
     final seatParts = seatInfo.split('|');
     if (seatParts.length < 2) {
       throw ArgumentError('Invalid seatInfo format: $seatInfo');
     }
 
-    final seatId = seatParts[0].trim(); // e.g., 1U
-    final seatType = seatParts[1].trim().toUpperCase(); // e.g., SUB
-    final isUpper = seatId.toLowerCase().endsWith('u');
-    final isAvailable = availableSet.contains(seatId);
-    final isLadiesOnly = ladiesSet.contains(seatId);
-    final isLadiesBooked = ladiesBookedSet?.contains(seatId) ?? false;
-    final isGentsBooked = gentsBookedSet?.contains(seatId) ?? false;
-    final isBooked = isLadiesBooked || isGentsBooked || !isAvailable;
+    final seatName = seatParts[0].trim();
+    final seatType = seatParts[1].trim().toUpperCase();
 
-    final seatCost = seatCostMap[seatType] ?? ''; // 💰 Fallback to '0' if not found
+    final isUpper = ['SUB', 'UB', 'DUB'].contains(seatType);
+    final isAvailable = availableSet.contains(seatName);
+    final isLadiesOnly = ladiesSet.contains(seatName);
+    final isLadiesBooked = ladiesBookedSet?.contains(seatName) ?? false;
+    final isGentsBooked = gentsBookedSet?.contains(seatName) ?? false;
+    final isBooked = isLadiesBooked || isGentsBooked || !isAvailable;
+    final seatCost = seatCostMap[seatType] ?? '';
 
     return SrsSeat(
-      seatId: seatId,
+      seatId: seatName,
       seatType: seatType,
-      position: seatId,
+      position: seatName,
       isAvailable: isAvailable,
       isLadiesOnly: isLadiesOnly,
       isLadiesBooked: isLadiesBooked,
@@ -67,7 +73,91 @@ class SrsSeat {
       isUpper: isUpper,
       row: row,
       column: col,
-      cost: seatCost, // 💰 Assign cost
+      cost: seatCost,
+      originId: originId,
+      destinationId: destinationId,
+    );
+  }
+}
+
+class StagePointseat {
+  final String id;
+  final String time;
+  final String fullAddress;
+  final String stage;
+  final String contact;
+  final String city;
+  final String seq;
+
+  StagePointseat({
+    required this.id,
+    required this.time,
+    required this.fullAddress,
+    required this.stage,
+    required this.contact,
+    required this.city,
+    required this.seq,
+  });
+
+  factory StagePointseat.fromRaw(String raw) {
+    final parts = raw.split('|');
+    return StagePointseat(
+      id: parts.length > 0 ? parts[0] : '',
+      time: parts.length > 1 ? parts[1] : '',
+      fullAddress: parts.length > 2 ? parts[2] : '',
+      stage: parts.length > 3 ? parts[3] : '',
+      contact: parts.length > 4 ? parts[4] : '',
+      city: parts.length > 5 ? parts[5] : '',
+      seq: parts.length > 6 ? parts[6] : '',
+    );
+  }
+
+  static List<StagePointseat> parseStageList(String raw) {
+    if (raw.isEmpty) return [];
+    return raw
+        .split('~')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .map(StagePointseat.fromRaw)
+        .toList();
+  }
+
+  Map<String, String> toMap() {
+    return {
+      "id": id,
+      "time": time,
+      "location": stage,
+      "fullAddress": fullAddress,
+      "stage": stage,
+      "contact": contact,
+      "city": city,
+      "seq": seq,
+    };
+  }
+}
+
+class SrsSeatLayoutResponse {
+  final List<SrsSeat> seats;
+  final List<StagePointseat> boardingStages;
+  final List<StagePointseat> droppingStages;
+  final String originId;
+  final String destinationId;
+
+  SrsSeatLayoutResponse({
+    required this.seats,
+    required this.boardingStages,
+    required this.droppingStages,
+    required this.originId,
+    required this.destinationId,
+  });
+
+  factory SrsSeatLayoutResponse.fromJson(Map<String, dynamic> json) {
+    return SrsSeatLayoutResponse(
+      originId: json['origin_id']?.toString() ?? '',
+      destinationId: json['destination_id']?.toString() ?? '',
+      boardingStages: StagePointseat.parseStageList(json['boarding_stages'] ?? ''),
+      droppingStages: StagePointseat.parseStageList(json['dropoff_stages'] ?? ''),
+      seats: [], // You will need to build the list using SrsSeat.fromLayout() externally
     );
   }
 }

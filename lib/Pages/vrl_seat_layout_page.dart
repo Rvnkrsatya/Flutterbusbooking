@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Models/VRL_seat_layout_model.dart';
 import '../Models/vrlBusesModel.dart';
 import '../Widgets/VRL_SeatLayoutWidget.dart';
@@ -20,9 +21,18 @@ class VrlSeatLayoutPage extends StatefulWidget {
   State<VrlSeatLayoutPage> createState() => _VrlSeatLayoutPageState();
 }
 
+
 class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
   int? selectedPrice;
   List<SeatLayout> selectedSeats = [];
+  String fromcity = '';
+  String tocity = '';
+
+  @override
+  void initState() {
+    super.initState();
+    loadSharedData();
+  }
 
   void handleSeatTap(SeatLayout seat) {
     if (!seat.isAvailable) return;
@@ -45,6 +55,38 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
         selectedSeats.add(seat);
       }
     });
+  }
+
+  Future<void> saveSelectedSeatInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Store list of seat names as a string (comma-separated)
+    final seatNames = selectedSeats.map((s) => s.seatName).toList();
+    final seatNamesString = seatNames.join(',');
+
+    final totalPrice = selectedSeats.fold(0, (sum, s) => sum + (s.fare?.toInt() ?? 0));
+
+    await prefs.setString('selectedSeats', seatNamesString);
+    await prefs.setInt('seatCount', selectedSeats.length);
+    await prefs.setInt('totalPrice', totalPrice);
+
+    debugPrint("✅ Saved to SharedPreferences:");
+    debugPrint("Seats: $seatNamesString");
+    debugPrint("Count: ${selectedSeats.length}");
+    debugPrint("Total Price: ₹$totalPrice");
+  }
+
+  Future<void> loadSharedData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    fromcity = prefs.getString('fromCity') ?? '';
+    tocity = prefs.getString('toCity') ?? '';
+
+    debugPrint("📦 Loaded from SharedPreferences:");
+    debugPrint("From: $fromcity");
+    debugPrint("To: $tocity");
+
+    // Optionally store in state or controller
   }
 
 // 👥 Gender restriction check
@@ -119,18 +161,6 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
       ),
       body: Stack(
         children: [
-          /// 🪑 Seat Layout with Price Selection
-          /*SeatLayoutWidget(
-            seats: widget.seats,
-            allPrices: widget.allPrices.map((e) => e.toDouble()).toList(),
-            selectedPrice: selectedPrice,
-            onPriceSelected: (int? price) {
-              setState(() {
-                selectedPrice = price;
-              });
-            },
-          ),*/
-
           SeatLayoutWidget(
             seats: widget.seats,
             allPrices: widget.allPrices.map((e) => e.toDouble()).toList(),
@@ -346,13 +376,14 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
                     const SizedBox(height: 10),
                     Center(
                       child: ElevatedButton.icon(
-                        onPressed: () {
+                        onPressed: () async {
+                          await saveSelectedSeatInfo();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => BoardingDroppingPage(
-                                fromLocation: 'Bangalore',
-                                toLocation: 'Mumbai',
+                                fromLocation: fromcity,
+                                toLocation: tocity,
                                 boardingPoints: boardingList,
                                 droppingPoints: droppingList,
                               ),

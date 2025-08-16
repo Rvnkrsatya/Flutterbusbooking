@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_yesgobus/screens/Tourplace.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:translator/translator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
 import '../Pages/bus_list_page.dart';
 import '../widgets/ProfileScreen.dart';
 import '../widgets/nav_bar.dart';
@@ -64,7 +65,6 @@ class _HomeScreenState extends State<HomeScreen> {
               surface: Colors.white,
               onSurface: darkBlue,
             ),
-            dialogTheme: const DialogTheme(backgroundColor: Colors.white),
           ),
           child: child!,
         );
@@ -103,6 +103,28 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _storeSearchData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!); // 👈 Format the date
+
+    await prefs.setString('fromCity', _fromCity);
+    await prefs.setString('toCity', _toCity);
+    await prefs.setString('selectedDate', formattedDate); // 👈 Store in dd/MM/yyyy
+    print('✅ Stored: $_fromCity → $_toCity on $formattedDate');
+  }
+
+  Future<void> _loadSearchData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _fromCity = prefs.getString('fromCity') ?? 'From';
+      _toCity = prefs.getString('toCity') ?? 'To';
+      final dateStr = prefs.getString('selectedDate');
+      if (dateStr != null) {
+        _selectedDate = DateTime.tryParse(dateStr) ?? DateTime.now();
+      }
+    });
+  }
   @override
   void initState() {
     super.initState();
@@ -340,16 +362,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               elevation: 0,
             ),
-            onPressed: () {
+            onPressed: () async {
               if (_fromCity != 'From' && _toCity != 'To' && _selectedDate != null) {
+                await _storeSearchData();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => BusListPage(
-                      fromCity: _fromCity,
-                      toCity: _toCity,
-                      selectedDate: _selectedDate!,
-                    ),
+                    builder: (context) => BusListPage(),
                   ),
                 );
               } else {
@@ -530,356 +549,3 @@ void launchCallNow(String phoneNumber) async {
     throw 'Could not launch $phoneUri';
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//
-// Widget build(BuildContext context) {
-//   return Scaffold(
-//     backgroundColor: Colors.white,
-//     appBar: const NavBar(),
-//     drawer: const ProfileDrawer(),
-//     body: SingleChildScrollView(
-//       child: Column(
-//         children: [
-//           ClipPath(
-//             child: Container(
-//               width: double.infinity,
-//               padding: EdgeInsets.all(16.w),
-//               decoration: BoxDecoration(
-//                 gradient: LinearGradient(
-//                   begin: Alignment.bottomCenter,
-//                   end: Alignment.topCenter,
-//                   colors: [
-//                     const Color(0xFF033564),
-//                     const Color(0xFF1E4D78),
-//                     const Color(0xFF3A6590),
-//                     const Color(0xFF5A86A8),
-//                     const Color(0xFF86A9C0),
-//                   ],
-//                 ),
-//                 borderRadius: BorderRadius.only(
-//                   bottomLeft: Radius.circular(40.r),
-//                   bottomRight: Radius.circular(40.r),
-//                 ),
-//               ),
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Row(
-//                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                     children: [
-//                       Text(
-//                         tBusTicket,
-//                         style: TextStyle(
-//                           fontSize: 20.sp,
-//                           fontWeight: FontWeight.bold,
-//                           color: Colors.white,
-//                         ),
-//                       ),
-//                       DropdownButton<String>(
-//                         value: _selectedLanguage,
-//                         dropdownColor: Colors.white,
-//                         icon: const Icon(Icons.language, color: Colors.white),
-//                         underline: const SizedBox(),
-//                         style: TextStyle(color: Colors.white, fontSize: 16.sp),
-//                         onChanged: (String? newLang) {
-//                           if (newLang != null) {
-//                             setState(() => _selectedLanguage = newLang);
-//                             _translateLabels(newLang);
-//                           }
-//                         },
-//                         items: const [
-//                           DropdownMenuItem(value: 'en', child: Text('English')),
-//                           DropdownMenuItem(value: 'hi', child: Text('हिन्दी')),
-//                           DropdownMenuItem(value: 'kn', child: Text('ಕನ್ನಡ')),
-//                           DropdownMenuItem(value: 'ml', child: Text('മലയാളം')),
-//                           DropdownMenuItem(value: 'te', child: Text('తెలుగు')),
-//                         ],
-//                       ),
-//                     ],
-//                   ),
-//                   SizedBox(height: 4.h),
-//                   ClipRRect(
-//                     borderRadius: BorderRadius.circular(16.r),
-//                     child: BackdropFilter(
-//                       filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-//                       child: Container(
-//                         padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
-//                         decoration: BoxDecoration(
-//                           color: Colors.white,
-//                           borderRadius: BorderRadius.circular(16.r),
-//                           border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.w),
-//                         ),
-//                         child: Column(
-//                           children: [
-//                             Row(
-//                               children: [
-//                                 const Icon(Icons.location_on, color: Colors.black),
-//                                 SizedBox(width: 4.w),
-//                                 Expanded(
-//                                   child: GestureDetector(
-//                                     onTap: () async {
-//                                       final result = await Navigator.push(
-//                                         context,
-//                                         MaterialPageRoute(
-//                                           builder: (_) => const LocationSelectorScreen(title: "From"),
-//                                         ),
-//                                       );
-//                                       if (result != null) {
-//                                         setState(() => _fromCity = result);
-//                                       }
-//                                     },
-//                                     child: Text(" $_fromCity", style: TextStyle(fontSize: 16.sp)),
-//                                   ),
-//                                 ),
-//                               ],
-//                             ),
-//                             SizedBox(height: 1.h),
-//                             Row(
-//                               children: [
-//                                 Expanded(child: Divider(color: Colors.grey)),
-//                                 SizedBox(width: 2.w),
-//                                 GestureDetector(
-//                                   onTap: _swapCities,
-//                                   child: Container(
-//                                     width: 30.w,
-//                                     height: 30.w,
-//                                     decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-//                                     child: const Icon(Icons.swap_vert, color: Colors.white),
-//                                   ),
-//                                 ),
-//                               ],
-//                             ),
-//                             SizedBox(height: 1.h),
-//                             Row(
-//                               children: [
-//                                 const Icon(Icons.flag, color: Colors.black),
-//                                 SizedBox(width: 4.w),
-//                                 Expanded(
-//                                   child: GestureDetector(
-//                                     onTap: () async {
-//                                       final result = await Navigator.push(
-//                                         context,
-//                                         MaterialPageRoute(
-//                                           builder: (_) => const LocationSelectorScreen(title: "To"),
-//                                         ),
-//                                       );
-//                                       if (result != null) {
-//                                         setState(() => _toCity = result);
-//                                       }
-//                                     },
-//                                     child: Text(" $_toCity", style: TextStyle(fontSize: 16.sp)),
-//                                   ),
-//                                 ),
-//                               ],
-//                             ),
-//                             Divider(thickness: 1.2.h, color: Colors.grey),
-//                             SizedBox(height: 1.h),
-//                             Row(
-//                               children: [
-//                                 Expanded(
-//                                   child: GestureDetector(
-//                                     onTap: _pickDateFromCalendar,
-//                                     child: Container(
-//                                       padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 8.w),
-//                                       decoration: BoxDecoration(
-//                                         color: Colors.white.withOpacity(0.2),
-//                                         borderRadius: BorderRadius.circular(8.r),
-//                                         border: Border.all(color: Colors.grey.shade300),
-//                                       ),
-//                                       child: Row(
-//                                         children: [
-//                                           Text(
-//                                             _formatDate(_selectedDate ?? DateTime.now()),
-//                                             style: TextStyle(fontSize: 16.sp, color: Colors.black),
-//                                           ),
-//                                           SizedBox(width: 10.w),
-//                                           const Icon(Icons.calendar_today, size: 18, color: Colors.black),
-//                                         ],
-//                                       ),
-//                                     ),
-//                                   ),
-//                                 ),
-//                                 SizedBox(width: 8.w),
-//                                 _dayButton('Today', 'today'),
-//                                 SizedBox(width: 6.w),
-//                                 _dayButton('Tomorrow', 'tomorrow'),
-//                               ],
-//                             ),
-//                           ],
-//                         ),
-//                       ),
-//                     ),
-//                   ),
-//                   SizedBox(height: 10.h),
-//                   SizedBox(
-//                     width: double.infinity,
-//                     child: ElevatedButton(
-//                       style: ElevatedButton.styleFrom(
-//                         backgroundColor: Colors.white,
-//                         shape: RoundedRectangleBorder(
-//                           borderRadius: BorderRadius.circular(12.r),
-//                         ),
-//                         elevation: 0,
-//                       ),
-//                       onPressed: () {
-//                         ScaffoldMessenger.of(context).showSnackBar(
-//                           SnackBar(
-//                             content: Text(
-//                               "Searching buses from $_fromCity to $_toCity on ${_selectedDate?.day}/${_selectedDate?.month}/${_selectedDate?.year}",
-//                             ),
-//                           ),
-//                         );
-//                       },
-//                       child: Text(
-//                         tSearch,
-//                         style: TextStyle(
-//                           color: Colors.black,
-//                           fontWeight: FontWeight.bold,
-//                           fontSize: 18.sp,
-//                         ),
-//                       ),
-//                     ),
-//                   ),
-//                   SizedBox(height: 1.h),
-//                   ClipRRect(
-//                     borderRadius: BorderRadius.only(
-//                       bottomLeft: Radius.circular(2.r),
-//                       bottomRight: Radius.circular(2.r),
-//                     ),
-//                     child: Image.asset(
-//                       'assets/images/ind_image.png',
-//                       width: double.infinity,
-//                       height: 70.h,
-//                       fit: BoxFit.cover,
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//             ),
-//           ),
-//           SizedBox(height: 10.h),
-//           Padding(
-//             padding: EdgeInsets.symmetric(horizontal: 12.w),
-//             child: Align(
-//               alignment: Alignment.centerLeft,
-//               child: Text(
-//                 'History',
-//                 style: TextStyle(
-//                   fontSize: 16.sp,
-//                   fontWeight: FontWeight.bold,
-//                   color: Colors.black.withOpacity(0.7),
-//                 ),
-//               ),
-//             ),
-//           ),
-//           SizedBox(height: 8.h),
-//           SizedBox(
-//             height: 70.h,
-//             child: SingleChildScrollView(
-//               scrollDirection: Axis.horizontal,
-//               padding: EdgeInsets.symmetric(horizontal: 12.w),
-//               child: Row(
-//                 children: List.generate(10, (index) {
-//                   return Container(
-//                     width: 130.w,
-//                     margin: EdgeInsets.only(right: 12.w),
-//                     padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
-//                     decoration: BoxDecoration(
-//                       color: const Color(0xFFeaf7fd),
-//                       borderRadius: BorderRadius.circular(12.r),
-//                       border: Border.all(color: const Color(0xFF033564)),
-//                     ),
-//                     child: Column(
-//                       crossAxisAlignment: CrossAxisAlignment.start,
-//                       children: [
-//                         Text("Karwar  Hubli",
-//                             style: TextStyle(
-//                               fontWeight: FontWeight.bold,
-//                               fontSize: 14.sp,
-//                               color: const Color(0xFF033564),
-//                             )),
-//                         SizedBox(height: 1.h),
-//                         Text("24 July 25",
-//                             style: TextStyle(
-//                               fontSize: 13.sp,
-//                               color: const Color(0xFF033564),
-//                             )),
-//                       ],
-//                     ),
-//                   );
-//                 }),
-//               ),
-//             ),
-//           ),
-//           SizedBox(height: 10.h),
-//           OffersSection(),
-//         ],
-//       ),
-//     ),
-//     bottomNavigationBar: Container(
-//       decoration: BoxDecoration(
-//         color: Colors.white,
-//         boxShadow: [
-//           BoxShadow(
-//             color: Colors.black26,
-//             offset: Offset(0, -2.h),
-//             blurRadius: 6.r,
-//           ),
-//         ],
-//       ),
-//       child: BottomNavigationBar(
-//         type: BottomNavigationBarType.fixed,
-//         selectedItemColor: darkBlue,
-//         unselectedItemColor: Colors.black,
-//         backgroundColor: Colors.white,
-//         currentIndex: _selectedIndex,
-//         onTap: (index) {
-//           setState(() {
-//             _selectedIndex = index;
-//           });
-//
-//           switch (index) {
-//             case 0:
-//               break;
-//             case 1:
-//               Navigator.pushNamed(context, '/busBooking');
-//               break;
-//             case 2:
-//               launchCallNow('1800123456');
-//               break;
-//             case 3:
-//               Get.to(() => const ProfileScreen());
-//               break;
-//           }
-//         },
-//         items: const [
-//           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-//           BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Bus Booking'),
-//           BottomNavigationBarItem(icon: Icon(Icons.call), label: 'Call to Book'),
-//           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-//         ],
-//       ),
-//     ),
-//   );
-// }

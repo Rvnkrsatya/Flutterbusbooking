@@ -641,7 +641,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 SizedBox(height: 20.h),
                                 Text(
-                                  'Ver: 01.2',
+                                  'Ver: 01.4',
                                   style:
                                   TextStyle(color: Colors.white, fontSize: 14.sp),
                                 ),

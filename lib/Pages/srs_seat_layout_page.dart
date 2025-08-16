@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../Models/srsBusesModel.dart';
 import '../Models/srs_seat_model.dart';
 import '../Widgets/srs_seat_layout_widget.dart';
@@ -7,11 +8,15 @@ import 'BoardingDroppingPage.dart';
 class SrsSeatLayoutPage extends StatefulWidget {
   final List<SrsSeat> seats;
   final SrsBusModel bus;
+  final List<StagePointseat> boardingStages;
+  final List<StagePointseat> dropoffStages;
 
   const SrsSeatLayoutPage({
     super.key,
     required this.seats,
     required this.bus,
+    required this.boardingStages,
+    required this.dropoffStages,
   });
 
   @override
@@ -40,12 +45,42 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
     });
   }
 
+  Future<void> saveSelectedSrsSeatInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Collect seat names
+    final seatNames = selectedSeats.map((s) => s.seatId).toList();
+    final seatNamesString = seatNames.join(',');
+
+    final seatPrices = selectedSeats.map((s) => s.cost.split(".").first).toList(); // Strip decimals
+    final seatPricesString = seatPrices.join(',');
+
+    // Calculate total price
+    final totalPrice = selectedSeats.fold(
+      0,
+          (sum, s) => sum + int.tryParse(s.cost?.split(".").first ?? '0')!,
+    );
+
+    await prefs.setString('selectedSeats', seatNamesString);
+    await prefs.setString('seatPrices', seatPricesString);
+    await prefs.setInt('seatCount', selectedSeats.length);
+    await prefs.setInt('totalPrice', totalPrice);
+
+    debugPrint("✅ SRS Seat Info Saved:");
+    debugPrint("Individual Prices: $seatPricesString");
+    debugPrint("Selected Seats: $seatNamesString");
+    debugPrint("Seat Count: ${selectedSeats.length}");
+    debugPrint("Total Price: ₹$totalPrice");
+  }
+
+
 
   @override
   Widget build(BuildContext context) {
     final bus = widget.bus;
-    final boardingList = bus.boardingStages;
-    final droppingList = bus.dropoffStages;
+    final boardingList = widget.boardingStages;
+    final droppingList = widget.dropoffStages;
+
     print("🟢 Boarding Points: ${boardingList.map((e) => '${e.stage} at ${e.time}').toList()}");
     print("🟢 Dropping Points: ${droppingList.map((e) => '${e.stage} at ${e.time}').toList()}");
 
@@ -152,7 +187,7 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
                     ...selectedSeats.map((seat) => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(seat.seatType,
+                        Text(seat.seatId,
                             style: const TextStyle(
                                 fontWeight: FontWeight.w500,
                                 fontSize: 16,
@@ -185,32 +220,21 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
                     const SizedBox(height: 10),
                     Center(
                       child: ElevatedButton.icon(
-                        onPressed: () {
+                        onPressed: () async {
+                          await saveSelectedSrsSeatInfo();
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => BoardingDroppingPage(
                                 fromLocation: "From",
                                 toLocation: "To",
-                                boardingPoints: boardingList
-                                    .map((e) => {
-                                  'location': e.stage,
-                                  'time': e.time,
-                                  'id': '',
-                                  'phone': '',
-                                })
-                                    .toList(),
-                                droppingPoints: droppingList
-                                    .map((e) => {
-                                  'location': e.stage,
-                                  'time': e.time,
-                                  'id': '',
-                                })
-                                    .toList(),
+                                boardingPoints: boardingList.map((stage) => stage.toMap()).toList(),
+                                droppingPoints: droppingList.map((stage) => stage.toMap()).toList(),
                               ),
                             ),
                           );
                         },
+
                         icon: const Icon(Icons.location_on_outlined),
                         label: const Text("Select Boarding & Dropping Point"),
                         style: ElevatedButton.styleFrom(
@@ -268,7 +292,7 @@ class _SrsSeatLayoutPageState extends State<SrsSeatLayoutPage> {
     );
   }
 
-  Widget _buildStageList(List<StagePoint> stages, ScrollController controller, String title) {
+  Widget _buildStageList(List<StagePointseat> stages, ScrollController controller, String title) {
     return ListView.separated(
       controller: controller,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),

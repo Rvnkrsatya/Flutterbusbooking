@@ -144,11 +144,7 @@ class _ProfileDrawerState extends State<ProfileDrawer> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => BusListPage(
-                    fromCity: "Karwar",           // Example values
-                    toCity: "Bangalore",
-                    selectedDate: DateTime.now(), // Replace with actual selected date
-                  ),
+                  builder: (context) => BusListPage(),
                 ),
               );
             },

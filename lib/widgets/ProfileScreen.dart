@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 import '../screens/LoginPage.dart';
 import '../Service/appservice/api_urls.dart';
-import '../Service/appservice/get_store_data.dart';
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -42,38 +41,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Id = prefs.getString('_id') ?? '';
       token = prefs.getString('token') ?? '';
       userDbId = prefs.getString('userId') ?? '';
-
     });
   }
-
-  // Future<void> _updateProfile() async {
-  //   if (_formKey.currentState!.validate()) {
-  //     final url = Uri.parse(ApiUrls.updateProfile(userDbId!));
-  //     final response = await http.patch(
-  //       url,
-  //       headers: {
-  //         'Authorization': 'Bearer $token',
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: jsonEncode({
-  //         "fullName": nameController.text.trim(),
-  //         "email": emailController.text.trim(),
-  //         "phone": phoneController.text.trim(),
-  //         "gender": selectedGender,
-  //       }),
-  //     );
-  //
-  //     if (response.statusCode == 200) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text("Profile updated successfully")),
-  //       );
-  //     } else {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text("Failed to update profile")),
-  //       );
-  //     }
-  //   }
-  // }
 
   Future<void> _updateProfile() async {
     if (_formKey.currentState!.validate()) {
@@ -97,7 +66,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       debugPrint('[RESPONSE] ${response.statusCode}: ${response.body}');
 
       if (response.statusCode == 200) {
-        // ✅ Save updated profile locally
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_fullName', nameController.text.trim());
         await prefs.setString('user_email', emailController.text.trim());
@@ -115,41 +83,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-
-  // Future<void> _updateProfile() async {
-  //   if (_formKey.currentState!.validate()) {
-  //     final url = Uri.parse(ApiUrls.updateProfile(Id!));
-  //     debugPrint('[API CALL] PATCH: $url');
-  //
-  //     final response = await http.patch(
-  //       url,
-  //       headers: {
-  //         'Authorization': 'Bearer $token',
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: jsonEncode({
-  //         "fullName": nameController.text.trim(),
-  //         "email": emailController.text.trim(),
-  //         "phone": phoneController.text.trim(),
-  //         "gender": selectedGender,
-  //       }),
-  //     );
-  //
-  //     debugPrint('[RESPONSE] ${response.statusCode}: ${response.body}');
-  //
-  //     if (response.statusCode == 200) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         const SnackBar(content: Text("Profile updated successfully")),
-  //       );
-  //     } else {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text("Failed to update profile: ${response.body}")),
-  //       );
-  //     }
-  //   }
-  // }
-
-
   Future<void> _deleteAccount() async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -164,7 +97,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (confirm == true && Id != null && token != null) {
-      // final url = Uri.parse("https://apis.yesgobus.com/api/user/$Id");
       final url = Uri.parse(ApiUrls.deleteProfile(Id!));
 
       debugPrint('[API CALL] DELETE: $url');
@@ -180,17 +112,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       debugPrint('[RESPONSE] ${response.statusCode}: ${response.body}');
 
       if (response.statusCode == 200) {
-        // Clear SharedPreferences
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
 
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Account deleted successfully")),
         );
 
-        // Navigate to Login Page using GetX
-        Get.offAll(() => const LoginPage());      } else {
+        Get.offAll(() => const LoginPage());
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Failed to delete account: ${response.body}")),
         );
@@ -202,10 +132,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF033564),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Profile",
+          style: TextStyle(color: Colors.white),
+        ),
+        centerTitle: true,
+      ),
       body: Column(
         children: [
           Container(
-            height: 240,
+            height: 180,
             width: double.infinity,
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -223,14 +166,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             child: Column(
               children: [
-                const SizedBox(height: 70),
+                const SizedBox(height: 10),
                 Stack(
                   alignment: Alignment.bottomRight,
                   children: [
                     const CircleAvatar(
                       radius: 50,
                       backgroundImage: NetworkImage(
-                        'https://cdn-icons-png.flaticon.com/512/149/149071.png', // Updated icon
+                        'https://cdn-icons-png.flaticon.com/512/149/149071.png',
                       ),
                     ),
                     Container(

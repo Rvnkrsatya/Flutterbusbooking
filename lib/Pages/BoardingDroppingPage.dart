@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'PassengerInfoScreen.dart'; // You need to create this file
 
 class BoardingDroppingPage extends StatefulWidget {
@@ -26,13 +27,76 @@ class BoardingDroppingPage extends StatefulWidget {
 class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
   String? selectedBoardingId;
   String? selectedDroppingId;
+  String fromcity = '';
+  String tocity = '';
 
   @override
   void initState() {
     super.initState();
     selectedBoardingId = widget.initialBoardingId;
     selectedDroppingId = widget.initialDroppingId;
+    loadSharedData();
   }
+
+  Future<Map<String, String>> saveBoardingDroppingInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final boardingPoint = widget.boardingPoints.firstWhere(
+          (point) => point['id'] == selectedBoardingId,
+      orElse: () => {
+        'id': '',
+        'location': '',
+        'time': '',
+        'contact': '',
+      },
+    );
+
+    final droppingPoint = widget.droppingPoints.firstWhere(
+          (point) => point['id'] == selectedDroppingId,
+      orElse: () => {
+        'id': '',
+        'location': '',
+        'time': '',
+        'contact': '',
+      },
+    );
+
+    await prefs.setString('boardingId', boardingPoint['id'] ?? '');
+    await prefs.setString('boardingLocation', boardingPoint['location'] ?? '');
+    await prefs.setString('boardingTime', boardingPoint['time'] ?? '');
+    await prefs.setString('boardingContact', boardingPoint['contact'] ?? '');
+
+
+    await prefs.setString('droppingId', droppingPoint['id'] ?? '');
+    await prefs.setString('droppingLocation', droppingPoint['location'] ?? '');
+    await prefs.setString('droppingTime', droppingPoint['time'] ?? '');
+    await prefs.setString('droppingContact', droppingPoint['contact'] ?? '');
+
+    debugPrint("✅ Boarding/Dropping Info Saved:");
+    debugPrint("Boarding: ${boardingPoint['location']} at ${boardingPoint['time']} (ID: ${boardingPoint['id']})");
+    debugPrint("Dropping: ${droppingPoint['location']} at ${droppingPoint['time']} (ID: ${droppingPoint['id']})");
+
+    return {
+      'boardingPoint': boardingPoint['location'] ?? '',
+      'droppingPoint': droppingPoint['location'] ?? '',
+      'boardingContact': boardingPoint['contact'] ?? '',
+      'droppingContact': droppingPoint['contact'] ?? '',
+    };
+  }
+
+  Future<void> loadSharedData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      fromcity = prefs.getString('fromCity') ?? '';
+      tocity = prefs.getString('toCity') ?? '';
+    });
+
+    debugPrint("📦 Loaded from SharedPreferences:");
+    debugPrint("From: $fromcity");
+    debugPrint("To: $tocity");
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +116,7 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
               ),
               const SizedBox(height: 2),
               Text(
-                "${widget.fromLocation} → ${widget.toLocation}",
+                "${fromcity} → ${tocity}",
                 style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
               ),
             ],
@@ -78,14 +142,20 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.all(16),
           child: ElevatedButton.icon(
-            onPressed: () {
+            onPressed: () async {
               if (selectedBoardingId != null && selectedDroppingId != null) {
+                await saveBoardingDroppingInfo(); // ✅ Save before navigation
+                final points = await saveBoardingDroppingInfo();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => PassengerInfoScreen(
                       boardingId: selectedBoardingId!,
                       droppingId: selectedDroppingId!,
+                      boardingpoint: points['boardingPoint'] ?? '',
+                      droppingpoint: points['droppingPoint'] ?? '',
+                      boardingContact: points['boardingContact'] ?? '',
+                      droppingContact: points['droppingContact'] ?? '',
                     ),
                   ),
                 );

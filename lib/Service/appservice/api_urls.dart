@@ -3,7 +3,7 @@
 class ApiUrls {
   static const String baseUrl = "https://apis.yesgobus.com/api/";
   // static const String baseUrl = "https://test.yesgobus.com/api/";  //testing
-
+  // static const String baseUrl ="https://1fa37e437c21.ngrok-free.app/api/";
   static String searchCity(String query) =>
       "${baseUrl}busBooking/searchCity/$query";
 
@@ -23,18 +23,39 @@ class ApiUrls {
   static const String verifyOtpsign = '${baseUrl}user/verify_signup_otp';
   static const String getQueries = "${baseUrl}query/getQueries";
   static const String createQuery = "${baseUrl}query/createQuery";
-
-
   static const String vrlbusdetails = "busBooking/getVrlBusDetails";
+  static const String getbookingbyid = "busBooking/getBookingById";
+
+
+  // static const String vrlbusdetails = "busBooking/getVrlBusDetails";
 
   // static const String srsbusdetails = "busBooking/getSrsSchedules/hubli/bangalore/2025-07-28";
 
 
-  static const String getVrlSeatLayout = "busBooking/sendVrlRequest/GetSeatArrangementDetailsV3";
-  static const String getSrsSeatLayout = "busBooking/getSrsSeatDetails/";
+  // static const String getVrlSeatLayout = "busBooking/sendVrlRequest/GetSeatArrangementDetailsV3";
+  // static const String getSrsSeatLayout = "busBooking/getSrsSeatDetails/";
+  static const String vrlbusdetailsV2 = "vrlbusdetailsver2";
+  static const String getVrlSeatLayout = "getVrlSeatLayout";
+  static const String vrlbusdetailsById = "vrl/v1/buses";
+  static const String vrlbusdetailsV3 = "vrl/v3/buses";
 
+
+  // ================= SRS APIs =================
+  static const String srsbusdetailsById = "srs/v1/buses";
+  static const String srsbusdetailsV3 = "srs/v3/buses";
+
+  // ✅ SRS API endpoints
+  static const String srsbusdetailsV2 = "srsbusdetailsver2";
+  static const String getSrsSeatLayout = "getSrsSeatLayout/";
   // ✅ Remove hardcoded cities/date — use base path
   static const String srsbusdetailsBase = "busBooking/getSrsSchedules";
+  static const String srsbusdetails = "busBooking/getSrsSchedules";
+  static const String vrlblockseat = "busBooking/sendVrlRequest/BlockSeatV2";
+  static const String srsblockseat = "busBooking/getSrsBlockSeat";
+  static const String srsbookseat = "busBooking/bookBus";
+  static const String getkey = "getkey";
+  static const String checkout = "payment/v2/checkout";
+  static const String verificationApiUrl = "https://apis.yesgobus.com/api/payment/v2/paymentverification";
 
 }
 

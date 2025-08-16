@@ -175,11 +175,11 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
               controller: _controller,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: "Search Boarding Point",
+                hintText: widget.title == "From" ? "Search Boarding Point" : "Search Dropping Point",
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color:Color(0xFF033564)),
+                  borderSide: const BorderSide(color: Color(0xFF033564)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),

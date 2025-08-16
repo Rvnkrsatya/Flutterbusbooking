@@ -284,7 +284,7 @@ class SrsSeatLayoutWidget extends StatelessWidget {
 
   bool _isSleeper(SrsSeat seat) {
     final type = seat.seatType.toUpperCase();
-    return ['SUB', 'SLB', 'LB', 'UB'].contains(type);
+    return ['SUB', 'SLB', 'LB', 'UB', 'DLB', 'DUB'].contains(type);  // ✅ updated
   }
 
   String getImagePath(SrsSeat seat) {
