@@ -1,9 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GetStoreData {
   static Future<void> storeUserData({
     required String userId,   // userId
-    required String Id,   // _id (Mongo DB ID)
+    required String Id,       // _id (Mongo DB ID)
     required String name,
     required String email,
     required String authToken,
@@ -27,5 +28,36 @@ class GetStoreData {
     if (deviceId != null) await prefs.setString('user_deviceId', deviceId);
     if (createdAt != null) await prefs.setString('user_createdAt', createdAt);
     if (updatedAt != null) await prefs.setString('user_updatedAt', updatedAt);
+  }
+
+  // ✅ Method to get and print all stored user data
+  static Future<void> printUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final userId = prefs.getString('userId') ?? '';
+    final mongoId = prefs.getString('_id') ?? '';
+    final name = prefs.getString('user_fullName') ?? '';
+    final email = prefs.getString('user_email') ?? '';
+    final token = prefs.getString('token') ?? '';
+    final isLoggedIn = prefs.getBool('user_isLoggedIn') ?? false;
+    final phone = prefs.getString('user_phone') ?? '';
+    final role = prefs.getString('user_role') ?? '';
+    final deviceId = prefs.getString('user_deviceId') ?? '';
+    final createdAt = prefs.getString('user_createdAt') ?? '';
+    final updatedAt = prefs.getString('user_updatedAt') ?? '';
+
+    debugPrint('===== User Data from SharedPreferences =====');
+    debugPrint('userId: $userId');
+    debugPrint('_id: $mongoId');
+    debugPrint('Name: $name');
+    debugPrint('Email: $email');
+    debugPrint('Token: $token');
+    debugPrint('Is Logged In: $isLoggedIn');
+    debugPrint('Phone: $phone');
+    debugPrint('Role: $role');
+    debugPrint('DeviceId: $deviceId');
+    debugPrint('Created At: $createdAt');
+    debugPrint('Updated At: $updatedAt');
+    debugPrint('============================================');
   }
 }

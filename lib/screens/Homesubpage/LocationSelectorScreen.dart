@@ -5,7 +5,7 @@ import 'dart:ui'; // Needed for ImageFilter
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../Service/appservice/api_urls.dart';
+import '../../Service/appservice/api_urls.dart';
 
 class LocationSelectorScreen extends StatefulWidget {
   final String title; // "From" or "To"
@@ -79,52 +79,127 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
   // }
   Future<void> _fetchSuggestions(String query) async {
     setState(() => _loading = true);
+
     final Map<String, String> _preferredCities = {
       'b': 'Bangalore',
       'h': 'Hubli',
       'd': 'Delhi',
       'm': 'Mumbai',
       'c': 'Chennai',
-      'k': 'Kolkata',
+      'k': 'karwar',
     };
+
+    List<String> suggestions = [];
+
+    // ✅ Add preferred cities if query matches the key
+    _preferredCities.forEach((key, value) {
+      if (value.toLowerCase().startsWith(query.toLowerCase())) {
+        suggestions.add(value);
+      }
+    });
 
     try {
       final response = await http.get(Uri.parse(ApiUrls.searchCity(query)));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body)['data'];
-        List<String> results = data
-            .map((item) => item['name'].toString().replaceAll(RegExp(r'Package.*'), '').trim())
-            .toList();
 
-        String firstLetter = query.toLowerCase()[0];
-        String? preferred = _preferredCities[firstLetter];
+        // Add API results, avoid duplicates
+        final apiCities =
+            data
+                .map(
+                  (item) =>
+                      item['name']
+                          .toString()
+                          .replaceAll(RegExp(r'Package.*'), '')
+                          .trim(),
+                )
+                .where(
+                  (city) => !suggestions.contains(city),
+                ) // avoid duplicates
+                .toList();
 
-        if (preferred != null &&
-            results.any((r) => r.toLowerCase() != preferred.toLowerCase()) &&
-            preferred.toLowerCase().startsWith(firstLetter)) {
-          results.removeWhere((item) => item.toLowerCase() == preferred.toLowerCase());
-          results.insert(0, preferred); // Put preferred city on top
-        }
-
-        setState(() {
-          _suggestions = results;
-        });
+        suggestions.addAll(apiCities);
       }
     } catch (e) {
       print("Error fetching cities: $e");
     }
 
+    setState(() => _suggestions = suggestions);
     setState(() => _loading = false);
   }
 
-  void _selectLocation(String location) async {
-    final key = widget.title == "From" ? "sourceCity" : "destinationCity";
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, location);
-    await _saveRecentSearch(location);
+  /// ✅ When user selects a city → second API hit to fetch full city details
+  void _selectLocation(String selectedName) async {
+    try {
+      final response = await http.get(
+        Uri.parse(ApiUrls.searchCity(selectedName)),
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body)['data'];
+
+        // ✅ Exact name filter: only pick the object matching selectedName
+        final city = data.firstWhere(
+          (item) =>
+              item['name'].toString().trim().toLowerCase() ==
+              selectedName.trim().toLowerCase(),
+          orElse: () => null,
+        );
+
+        if (city != null) {
+          print("✅ Saving exact city: $city");
+
+          final prefs = await SharedPreferences.getInstance();
+          final key = widget.title == "From" ? "sourceCity" : "destinationCity";
+
+          await prefs.setString(key, city["name"]);
+
+          if (widget.title == "From") {
+            await prefs.setString("vrlSourceCityId", city["vrlCityId"] ?? "");
+            await prefs.setString("srsSourceCityId", city["srsCityId"] ?? "");
+            await prefs.setString(
+              "vrlSourceCityName",
+              city["vrlCityName"] ?? "",
+            );
+            await prefs.setString(
+              "srsSourceCityName",
+              city["srsCityName"] ?? "",
+            );
+          } else {
+            await prefs.setString(
+              "vrlDestinationCityId",
+              city["vrlCityId"] ?? "",
+            );
+            await prefs.setString(
+              "srsDestinationCityId",
+              city["srsCityId"] ?? "",
+            );
+            await prefs.setString(
+              "vrlDestinationCityName",
+              city["vrlCityName"] ?? "",
+            );
+            await prefs.setString(
+              "srsDestinationCityName",
+              city["srsCityName"] ?? "",
+            );
+          }
+
+          print("---- Saved City Data ----");
+          print("Selected: ${city["name"]}");
+          print("vrlCityId: ${city["vrlCityId"]}");
+          print("srsCityId: ${city["srsCityId"]}");
+          print("vrlCityName: ${city["vrlCityName"]}");
+          print("srsCityName: ${city["srsCityName"]}");
+          print("-------------------------");
+        } else {
+          print("⚠️ No exact match found for '$selectedName'");
+        }
+      }
+    } catch (e) {
+      print("❌ Error fetching full city details: $e");
+    }
 
     if (!mounted) return;
-    Navigator.pop(context, location);
+    Navigator.pop(context, selectedName);
   }
 
   @override
@@ -139,14 +214,12 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         title: ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [
-              Color(0xFF033564),
-              Color(0xFF14bde3),
-            ],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ).createShader(bounds),
+          shaderCallback:
+              (bounds) => const LinearGradient(
+                colors: [Color(0xFF033564), Color(0xFF14bde3)],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ).createShader(bounds),
           child: Text(
             'Select ${widget.title} Location',
             style: const TextStyle(
@@ -166,7 +239,6 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
         ),
       ),
 
-
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -175,7 +247,10 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
               controller: _controller,
               autofocus: true,
               decoration: InputDecoration(
-                hintText: widget.title == "From" ? "Search Boarding Point" : "Search Dropping Point",
+                hintText:
+                    widget.title == "From"
+                        ? "Search Boarding Point"
+                        : "Search Dropping Point",
                 prefixIcon: const Icon(Icons.search),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -210,7 +285,10 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                   children: [
                     const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8.0),
-                      child: Text("Recent Searches", style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(
+                        "Recent Searches",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
                     ),
                     Expanded(
                       child: ListView.builder(
@@ -219,11 +297,12 @@ class _LocationSelectorScreenState extends State<LocationSelectorScreen> {
                           return ListTile(
                             leading: const Icon(Icons.history),
                             title: Text(_recentSearches[index]),
-                            onTap: () => _selectLocation(_recentSearches[index]),
+                            onTap:
+                                () => _selectLocation(_recentSearches[index]),
                           );
                         },
                       ),
-                    )
+                    ),
                   ],
                 ),
               ),

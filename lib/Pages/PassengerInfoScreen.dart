@@ -11,6 +11,7 @@ import 'package:get/get_core/src/get_main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
+import '../Models/VRLBookBus_model.dart';
 import '../Service/appservice/api_urls.dart';
 import '../Service/appservice/apibase.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
@@ -66,12 +67,15 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
   String origin_id_srs = '';
   String destination_id_srs = '';
   String user_token = '';
+  String _id = '';
   String user_id = '';
   String Razorpay_Key = '';
   String pnr_number = '';
   String bookingId = '';
   String currency = '';
   String orderId = '';
+  String VRL_blockId = '';
+  String VRL_bookingId = '';
 
   @override
   void initState() {
@@ -112,9 +116,11 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
       emailController.text = prefs.getString('user_email') ?? '';
       phoneController.text = prefs.getString('user_phone') ?? '';
       user_token = prefs.getString('token') ?? '';
-      user_id = prefs.getString('_id') ?? '';
+      _id = prefs.getString('_id') ?? '';
+      user_id = prefs.getString('userId') ?? '';
 
       print("usertoken : $user_token");
+      print("_id : $_id");
       print("userid : $user_id");
 
       firstNameControllers = List.generate(seatCount, (_) => TextEditingController());
@@ -124,7 +130,8 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
 
       selectedSeats = (prefs.getString('selectedSeats') ?? '').split(',').map((e) => e.trim()).toList();
       selectedSeatsfare = (prefs.getString('seatPrices') ?? '').split(',').map((e) => e.trim()).toList();
-      seatTaxes = List<String>.from(jsonDecode(prefs.getString('seatTaxes') ?? '[]'));
+      final decodedTaxes = jsonDecode(prefs.getString('seatTaxes') ?? '[]');
+      seatTaxes = List<String>.from(decodedTaxes.map((e) => e.toString()));
       seatTotalFares = List<String>.from(jsonDecode(prefs.getString('seatTotalFares') ?? '[]'));
 
       email = emailController.text;
@@ -142,7 +149,6 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
           "gender": genderSelections[index] == "Male" ? "M" : "F",
         };
       });
-
     });
   }
 
@@ -510,6 +516,10 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
         final parsedResponse = VrlBlockSeatApiResponse.fromJson(json);
 
         if (parsedResponse.data.isNotEmpty && parsedResponse.data.first.status == 1) {
+          final blockId = parsedResponse.data.first.blockId; // ✅ Extract BlockID
+
+          print("✅ Seat block success. BlockID: $blockId");
+          await bookVrlBus(blockId);
           return parsedResponse.data.first;
         } else {
           print("Seat block failed: ${parsedResponse.data.first.message}");
@@ -522,6 +532,300 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
     } catch (e) {
       print("BlockSeat error: $e");
       return null;
+    }
+  }
+
+  Future<void> bookVrlBus(int blockId) async {
+    try {
+      final passengerCount = selectedSeats.length;
+      final email = emailController.text.trim();
+      final phone = phoneController.text.trim();
+
+      log("DEBUG: passengerCount=$passengerCount");
+      log("DEBUG: firstNameControllers=${firstNameControllers.length}");
+      log("DEBUG: lastNameControllers=${lastNameControllers.length}");
+      log("DEBUG: ageControllers=${ageControllers.length}");
+      log("DEBUG: genderSelections=${genderSelections.length}");
+      log("DEBUG: selectedSeatsfare=${selectedSeatsfare.length}");
+      log("DEBUG: seatTaxes=${seatTaxes.length}");
+
+      // ✅ STEP 2: Early check for empty passengers
+      if (passengerCount == 0 ||
+          firstNameControllers.isEmpty ||
+          lastNameControllers.isEmpty ||
+          ageControllers.isEmpty ||
+          genderSelections.isEmpty ||
+          selectedSeatsfare.isEmpty ||
+          seatTaxes.isEmpty) {
+        log("❌ No passenger data available. Cannot proceed with booking.");
+        return;
+      }
+
+      bool allDataFilled = true;
+      for (int i = 0; i < passengerCount; i++) {
+        if (firstNameControllers[i].text.trim().isEmpty ||
+            lastNameControllers[i].text.trim().isEmpty ||
+            ageControllers[i].text.trim().isEmpty ||
+            genderSelections[i].trim().isEmpty) {
+          allDataFilled = false;
+          log("❌ Missing details for passenger ${i + 1}");
+        }
+      }
+      if (!allDataFilled) return;
+
+      // ✅ STEP 3: Make sure all lists are same length
+      assert(genderSelections.length == passengerCount, "Gender list length mismatch");
+      assert(firstNameControllers.length == passengerCount, "First name list length mismatch");
+      assert(lastNameControllers.length == passengerCount, "Last name list length mismatch");
+      assert(ageControllers.length == passengerCount, "Age list length mismatch");
+      assert(selectedSeatsfare.length == passengerCount, "Fare list length mismatch");
+      assert(seatTaxes.length == passengerCount, "Tax list length mismatch");
+
+      final seatWithGender = List.generate(
+        passengerCount,
+            (i) => '${selectedSeats[i]},${genderSelections[i] == "Male" ? "M" : "F"}',
+      ).join('|');
+
+      // Seat Details string: "A1,John,9876543210,30|A2,Jane,9876543210,28"
+      final seatDetailsWithName = List.generate(
+        passengerCount,
+            (i) => '${selectedSeats[i]},${firstNameControllers[i].text.trim()},$phone,${ageControllers[i].text.trim()}',
+      ).join('|');
+
+      // Pax Details array
+      final paxDetails = List.generate(
+        passengerCount,
+            (i) => {
+          "seatName": '${selectedSeats[i]},${genderSelections[i] == "Male" ? "M" : "F"}',
+          "paxName": "${firstNameControllers[i].text.trim()} ${lastNameControllers[i].text.trim()}",
+          "mobileNo": phone,
+          "paxAge": ageControllers[i].text.trim(),
+          "baseFare": selectedSeatsfare[i],
+          "gstFare": seatTaxes[i],
+          "totalFare": totalPrice,
+          "idProofId": 0,
+          "idProofDetails": ""
+        },
+      );
+
+      final body = {
+        "reservationSchema": {
+          "referenceNumber": referenceNumber_vrl,
+          "passengerName": firstNameControllers[0].text.trim(),
+          "seatNames": seatWithGender,
+          "email": email,
+          "phone": phone,
+          "pickUpID": widget.boardingId,
+          "dropID": widget.droppingId,
+          "payableAmount": totalPrice,
+          "totalPassengers": passengerCount,
+          "seatDetails": seatDetailsWithName,
+          "discount": 0,
+          "paxDetails": paxDetails,
+          "gstState": 0,
+          "gstCompanyName": "",
+          "gstRegNo": "",
+          "apipnrNo": blockId
+        },
+        "blockKey": blockId,
+        "userId": _id,
+        "totalAmount": totalPrice,
+        "busOperator": operator,
+        "busType": busType,
+        "selectedSeats": selectedSeats.join(", "),
+        "pickUpTime": dep,
+        "reachTime": arr,
+        "cancellationPolicy": "",
+        "sourceCity": from_city,
+        "destinationCity": to_city,
+        "doj": journeyDate,
+        "customerName": firstNameControllers[0].text.trim(),
+        "customerLastName": lastNameControllers[0].text.trim(),
+        "customerEmail": email,
+        "customerPhone": phone,
+        "customerAddress": "",
+        "isVrl": true,
+        "boardingPoint": widget.boardingpoint,
+        "droppingPoint": widget.droppingpoint,
+        "driverNumber": widget.boardingContact,
+        "agentCode": ""
+      };
+
+      final response = await ApiBase.postRequest(
+        extendedURL: ApiUrls.vrlbookseat, // change to your API URL
+        body: body,
+        withToken: true,
+      );
+
+      if (response.statusCode == 200) {
+        log("BookBus response: ${response.body}");
+        final parsedResponse = BookBusResponse.fromJson(jsonDecode(response.body));
+
+        VRL_blockId = parsedResponse.data!.blockKey; // from blockKey
+        VRL_bookingId = parsedResponse.data!.id; // from "_id" in main data
+
+        print("Block ID: $VRL_blockId, Booking ID: $VRL_bookingId");
+
+        checkagent(totalPrice);
+      } else {
+        log("BookBus failed: ${response.statusCode} ${response.body}");
+      }
+    } catch (e) {
+      log("BookBus error: $e");
+    }
+  }
+
+  Future<void> checkagent(int totalPrice) async {
+    try {
+      final checkAgentRes = await ApiBase.getRequest(
+        extendedURL: "${ApiUrls.checkagent}/$user_id",
+        withToken: false,
+      );
+
+      if (checkAgentRes.statusCode == 200) {
+        final data = jsonDecode(checkAgentRes.body);
+
+        bool isAgent = data['isAgent'] ?? false;
+        double wallet = (data['wallet'] ?? 0).toDouble();
+
+        if (!isAgent) {
+          // 2️⃣ Not an agent → Call getKey API
+          await getkey();
+        } else {
+          // 3️⃣ Agent → Check wallet
+          if (wallet < totalPrice) {
+            // 4️⃣ Wallet balance low
+            await showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text("Insufficient Wallet balance"),
+                content: Text(
+                    "Your wallet balance is ₹${wallet.toStringAsFixed(2)} but total price is ₹${totalPrice.toStringAsFixed(2)}."),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("OK"),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            // 5️⃣ Show Confirm Booking Popup
+            bool confirm = await showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text("Confirm Booking"),
+                content: Text(
+                    "Your wallet balance is ₹${wallet.toStringAsFixed(2)}.\nDo you want to confirm booking for ₹${totalPrice.toStringAsFixed(2)}?"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text("Cancel"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text("Confirm"),
+                  ),
+                ],
+              ),
+            );
+
+            // 6️⃣ If Confirmed → Call another API
+            if (confirm == true) {
+              if (type == "vrl") {
+                await agentbusbooking(bookingId: VRL_bookingId, blockId: VRL_blockId, userId: user_id, amount: totalPrice); // Replace with your function
+              } else {
+                await agentbusbooking(bookingId: bookingId, blockId: pnr_number, userId: user_id, amount: totalPrice);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error in booking flow: $e");
+    }
+  }
+
+  Future<void> agentbusbooking({
+    required String bookingId,
+    required String blockId,
+    required String userId,
+    required int amount,
+  }) async {
+    try {
+      final response = await ApiBase.postRequest(
+        extendedURL: ApiUrls.agentbusbooking,
+        body: {
+          "bookingId": bookingId,
+          "blockId": blockId,
+          "userId": userId,
+          "amount": amount
+        },
+        withToken: true,
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        print("✅ API Response: $data");
+
+        if (data["message"] == "Booking initiated successfully") {
+          // ✅ Navigate to Payment Screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaymentStatusScreen(bookingId: bookingId),
+            ),
+          );
+        } else {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: const Text("Booking Failed"),
+              content: Text(data["message"] ?? "Unknown error"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("OK"),
+                )
+              ],
+            ),
+          );
+        }
+      } else {
+        print("❌ API call failed with status: ${response.statusCode}");
+      }
+    } catch (e) {
+      print("⚠️ BlockSeat error: $e");
+    }
+  }
+
+
+  Future<void> getkey() async {
+    final url = ApiUrls.getkey;
+    debugPrint("🟡 getkey - $url");
+
+    final response = await ApiBase.getRequest(extendedURL: url, withToken: true);
+
+    debugPrint("🟠 getkey Response Status: ${response.statusCode}");
+    debugPrint("🟠 getkey Response Body: ${response.body}");
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data != null && data['key'] != null) {
+        Razorpay_Key = data['key'];
+        debugPrint("✅ Razorpay Key: $Razorpay_Key");
+
+        if (type == "vrl") {
+          checkoutApi(context, totalPrice, VRL_bookingId, VRL_blockId, _id);
+        } else {
+          checkoutApi(context, totalPrice, bookingId, pnr_number, _id);
+        }
+
+
+      } else {
+        debugPrint("❌ 'key' not found in response.");
+      }
     }
   }
 
@@ -620,7 +924,6 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
 
   Future<void> bookSrsTicket(String pnrNumber) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
 
       final email = emailController.text.trim();
       final phone = phoneController.text.trim();
@@ -668,7 +971,7 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
           }
         },
         "blockKey": pnrNumber,
-        "userId": user_id,
+        "userId": _id,
         "totalAmount": totalPrice.toString(),
         "busOperator": operator,
         "busType": busType, // define it or get from previous screen
@@ -704,7 +1007,7 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
         print("✅ SRS BOOK BUS SUCCESS: $json");
         final bookingRes = SrsBookBusResponse.fromJson(json);
         bookingId = bookingRes.data!.id!; // "_id" from your model
-        getkey();
+        checkagent(totalPrice);
       } else {
         print("❌ Book Bus Failed: ${response.statusCode}");
       }
@@ -713,27 +1016,6 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
     }
   }
 
-
-  Future<void> getkey() async {
-    final url = ApiUrls.getkey;
-    debugPrint("🟡 getkey - $url");
-
-    final response = await ApiBase.getRequest(extendedURL: url, withToken: true);
-
-    debugPrint("🟠 getkey Response Status: ${response.statusCode}");
-    debugPrint("🟠 getkey Response Body: ${response.body}");
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-
-      if (data != null && data['key'] != null) {
-        Razorpay_Key = data['key'];
-        debugPrint("✅ Razorpay Key: $Razorpay_Key");
-        checkoutApi(context, totalPrice, bookingId!, pnr_number, user_id);
-      } else {
-        debugPrint("❌ 'key' not found in response.");
-      }
-    }
-  }
 
   Future checkoutApi(context, int amount, String bookingId, String blockId,String Id) async {
     var body = {
@@ -853,7 +1135,4 @@ class _PassengerInfoScreenState extends State<PassengerInfoScreen> {
     );
     print("Payment Failed: ${response.walletName}");
   }
-
-
-
 }

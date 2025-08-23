@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Models/VRL_seat_layout_model.dart';
@@ -21,12 +23,12 @@ class VrlSeatLayoutPage extends StatefulWidget {
   State<VrlSeatLayoutPage> createState() => _VrlSeatLayoutPageState();
 }
 
-
 class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
   int? selectedPrice;
   List<SeatLayout> selectedSeats = [];
   String fromcity = '';
   String tocity = '';
+  bool _showSeatDetails = false;
 
   @override
   void initState() {
@@ -63,15 +65,26 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
     // Store list of seat names as a string (comma-separated)
     final seatNames = selectedSeats.map((s) => s.seatName).toList();
     final seatNamesString = seatNames.join(',');
+    final seatPrices = selectedSeats.map((s) => (s.fare.toInt() ?? 0)).toList();
+    final seatPricesString = seatPrices.join(',');
+    final totalPrice = selectedSeats.fold(
+      0,
+          (sum, s) => sum + (s.fare.toInt() ?? 0),
+    );
+    final seatTaxes = selectedSeats.map((s) => s.serviceTax.toInt()).toList();
+    final seatTaxesString = seatTaxes.join(',');
 
-    final totalPrice = selectedSeats.fold(0, (sum, s) => sum + (s.fare?.toInt() ?? 0));
-
+    // await prefs.setString('seatTaxes', seatTaxesString);
+    await prefs.setString('seatTaxes', jsonEncode(seatTaxes));
     await prefs.setString('selectedSeats', seatNamesString);
+    await prefs.setString('seatPrices', seatPricesString);
     await prefs.setInt('seatCount', selectedSeats.length);
     await prefs.setInt('totalPrice', totalPrice);
 
     debugPrint("✅ Saved to SharedPreferences:");
     debugPrint("Seats: $seatNamesString");
+    debugPrint("Taxes: $seatTaxesString");
+    debugPrint("Prices: $seatPricesString");
     debugPrint("Count: ${selectedSeats.length}");
     debugPrint("Total Price: ₹$totalPrice");
   }
@@ -89,7 +102,7 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
     // Optionally store in state or controller
   }
 
-// 👥 Gender restriction check
+  // 👥 Gender restriction check
   bool _isBesideOppositeGender(SeatLayout seat) {
     for (var s in selectedSeats) {
       if (areAdjacent(s, seat)) {
@@ -102,7 +115,7 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
     return false;
   }
 
-// 🪑 Define adjacency logic as per your layout (e.g. same row, next column)
+  // 🪑 Define adjacency logic as per your layout (e.g. same row, next column)
   bool areAdjacent(SeatLayout a, SeatLayout b) {
     // Example logic: check if seatNo difference is 1 or in adjacent columns
     int numA = int.tryParse(RegExp(r'\d+').stringMatch(a.seatName) ?? '') ?? -1;
@@ -125,11 +138,7 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
   List<Map<String, String>> parseDroppingPoints(String raw) {
     return raw.split('#').map((point) {
       final parts = point.split('|');
-      return {
-        'id': parts[0],
-        'location': parts[1],
-        'time': parts[2],
-      };
+      return {'id': parts[0], 'location': parts[1], 'time': parts[2]};
     }).toList();
   }
 
@@ -150,8 +159,9 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
     final droppingList = parseDroppingPoints(widget.bus.droppingPoints);
     final amenitiesList = parseAmenities(widget.bus.routeAmenities);
     final routeName = widget.bus.routeName;
-    List<Map<String, String>> amenities =
-        parseAmenities(widget.bus.routeAmenities);
+    List<Map<String, String>> amenities = parseAmenities(
+      widget.bus.routeAmenities,
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -182,8 +192,9 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
             builder: (context, scrollController) {
               return Material(
                 elevation: 20,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(16),
+                ),
                 color: Colors.white,
                 child: DefaultTabController(
                   length: 4,
@@ -215,63 +226,83 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
                             /// 🗺️ Route Tab
                             SingleChildScrollView(
                               controller: scrollController,
-                              child: _buildRouteTab(),
+                              child: Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: selectedSeats.isNotEmpty ? 160 : 0,
+                                ),
+                                child: _buildRouteTab(),
+                              ),
                             ),
 
                             /// 🚏 Boarding Points Tab
                             ListView(
                               controller: scrollController,
-                              padding: const EdgeInsets.all(16),
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, selectedSeats.isNotEmpty ? 160 : 16),
                               children: [
-                                const Text("Boarding Points",
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold)),
+                                const Text(
+                                  "Boarding Points",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 8),
-                                ...boardingList.map((bp) => _buildTimelineTile(
-                                      bp['time']!,
-                                      bp['location']!,
-                                      bp['phone']!,
-                                    )),
+                                ...boardingList.map(
+                                      (bp) => _buildTimelineTile(
+                                    bp['time']!,
+                                    bp['location']!,
+                                    bp['phone']!,
+                                  ),
+                                ),
                               ],
                             ),
 
                             /// 🛬 Dropping Points Tab
                             ListView(
                               controller: scrollController,
-                              padding: const EdgeInsets.all(16),
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, selectedSeats.isNotEmpty ? 160 : 16),
                               children: [
-                                const Text("Dropping Points",
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold)),
+                                const Text(
+                                  "Dropping Points",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 8),
-                                ...droppingList.map((dp) => _buildTimelineTile(
-                                      dp['time']!,
-                                      dp['location']!,
-                                      '',
-                                    )),
+                                ...droppingList.map(
+                                      (dp) => _buildTimelineTile(
+                                    dp['time']!,
+                                    dp['location']!,
+                                    '',
+                                  ),
+                                ),
                               ],
                             ),
 
                             /// ✅ Amenities Tab
                             ListView(
                               controller: scrollController,
-                              padding: const EdgeInsets.all(16),
+                              padding: EdgeInsets.fromLTRB(16, 16, 16, selectedSeats.isNotEmpty ? 160 : 16),
                               children: [
-                                const Text("Amenities",
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold)),
+                                const Text(
+                                  "Amenities",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 const SizedBox(height: 12),
                                 Wrap(
                                   alignment: WrapAlignment.start,
-                                  children: amenities.map((amenity) {
+                                  children:
+                                  amenities.map((amenity) {
                                     return _buildAmenityChip(
-                                        amenity['title'] ?? '',
-                                        amenity['desc'] ?? '');
+                                      amenity['title'] ?? '',
+                                      amenity['desc'] ?? '',
+                                    );
                                   }).toList(),
-                                )
+                                ),
                               ],
                             ),
                           ],
@@ -289,137 +320,7 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 5,
-                      color: Colors.black.withOpacity(0.05),
-                      offset: const Offset(0, -2),
-                    )
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Selected Seats",
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF033564),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Column(
-                          children: selectedSeats.map((seat) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "${seat.seatName}",
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Color(0xFF033564),
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  Text(
-                                    "₹${seat.fare?.toInt() ?? 0}",
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF033564),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                        const Divider(thickness: 1, height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              "Total Price",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF033564),
-                              ),
-                            ),
-                            Text(
-                              "₹${selectedSeats.fold(0, (sum, s) => sum + (s.fare?.toInt() ?? 0))}",
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF033564),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    const SizedBox(height: 10),
-                    Center(
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          await saveSelectedSeatInfo();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => BoardingDroppingPage(
-                                fromLocation: fromcity,
-                                toLocation: tocity,
-                                boardingPoints: boardingList,
-                                droppingPoints: droppingList,
-                              ),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.location_on_outlined,
-                            color: Colors.white),
-                        label: const Text(
-                          "Select Boarding & Dropping Point",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 16),
-                          backgroundColor: const Color(0xFF033564), // dark navy
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 6,
-                          shadowColor:
-                              const Color(0x6614bde3), // subtle glow effect
-                          textStyle: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              child: _buildSelectedSeatsBar(),
             ),
         ],
       ),
@@ -442,19 +343,29 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(time,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 15)),
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+              Text(
+                time,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               if (subtitle.isNotEmpty)
-                Text(subtitle,
-                    style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 14),
+                ),
               const SizedBox(height: 16),
             ],
           ),
-        )
+        ),
       ],
     );
   }
@@ -489,28 +400,46 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
       case 'reading light':
         return const Icon(Icons.lightbulb, color: Color(0xFF14bde3), size: 20);
       case 'fire extinguisher':
-        return const Icon(Icons.local_fire_department,
-            color: Color(0xFF14bde3), size: 20);
+        return const Icon(
+          Icons.local_fire_department,
+          color: Color(0xFF14bde3),
+          size: 20,
+        );
       case 'mobile charging point':
       case 'usb port for charger':
         return const Icon(Icons.power, color: Color(0xFF14bde3), size: 20);
       case 'm-ticket supported':
-        return const Icon(Icons.confirmation_number,
-            color: Color(0xFF14bde3), size: 20);
+        return const Icon(
+          Icons.confirmation_number,
+          color: Color(0xFF14bde3),
+          size: 20,
+        );
       case 'emergency exit':
-        return const Icon(Icons.exit_to_app,
-            color: Color(0xFF14bde3), size: 20);
+        return const Icon(
+          Icons.exit_to_app,
+          color: Color(0xFF14bde3),
+          size: 20,
+        );
       case 'live bus tracking':
-        return const Icon(Icons.location_on,
-            color: Color(0xFF14bde3), size: 20);
+        return const Icon(
+          Icons.location_on,
+          color: Color(0xFF14bde3),
+          size: 20,
+        );
       case 'hammer':
-        return const Icon(Icons.construction,
-            color: Color(0xFF14bde3), size: 20);
+        return const Icon(
+          Icons.construction,
+          color: Color(0xFF14bde3),
+          size: 20,
+        );
       case 'helpline number':
         return const Icon(Icons.phone, color: Color(0xFF14bde3), size: 20);
       default:
-        return const Icon(Icons.check_circle,
-            color: Color(0xFF14bde3), size: 20);
+        return const Icon(
+          Icons.check_circle,
+          color: Color(0xFF14bde3),
+          size: 20,
+        );
     }
   }
 
@@ -540,8 +469,11 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
                     // Left Column - Departure
                     Column(
                       children: [
-                        const Icon(Icons.location_on,
-                            color: Color(0xFF14bde3), size: 28),
+                        const Icon(
+                          Icons.location_on,
+                          color: Color(0xFF14bde3),
+                          size: 28,
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           widget.bus.fromCityName,
@@ -569,8 +501,11 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
                             margin: const EdgeInsets.only(top: 48),
                           ),
                           const Positioned(
-                            child: Icon(Icons.directions_bus,
-                                color: Color(0xFF033564), size: 28),
+                            child: Icon(
+                              Icons.directions_bus,
+                              color: Color(0xFF033564),
+                              size: 28,
+                            ),
                           ),
                         ],
                       ),
@@ -579,8 +514,11 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
                     // Right Column - Arrival
                     Column(
                       children: [
-                        const Icon(Icons.flag,
-                            color: Color(0xFF14bde3), size: 28),
+                        const Icon(
+                          Icons.flag,
+                          color: Color(0xFF14bde3),
+                          size: 28,
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           widget.bus.toCityName,
@@ -619,4 +557,204 @@ class _VrlSeatLayoutPageState extends State<VrlSeatLayoutPage> {
       ),
     );
   }
+
+
+
+  Widget _buildSelectedSeatsBar() {
+    final totalPrice =
+    selectedSeats.fold(0, (sum, s) => sum + (s.fare?.toInt() ?? 0));
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(color: Colors.grey.shade300),
+        ),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 5,
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, -2),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔹 Collapsed header
+          if (!_showSeatDetails)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "${selectedSeats.length} seat(s) selected",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: Color(0xFF033564),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Text(
+                      "₹$totalPrice",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF033564),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add, color: Color(0xFF033564)),
+                      onPressed: () {
+                        setState(() {
+                          _showSeatDetails = true;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+          // 🔹 Expanded section
+          if (_showSeatDetails) ...[
+            // Heading with ❌
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Fare Breakdown",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF033564),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Color(0xFF033564)),
+                  onPressed: () {
+                    setState(() {
+                      _showSeatDetails = false;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // Seat list
+            ...selectedSeats.map((seat) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      seat.seatName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Color(0xFF14bde3),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      "₹${seat.fare?.toInt() ?? 0}",
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF14bde3),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+
+            const Divider(thickness: 1, height: 16),
+
+            // Total
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Total",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF033564),
+                  ),
+                ),
+                Text(
+                  "₹$totalPrice",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF033564),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ✅ Seats selected info at bottom
+            Text(
+              "${selectedSeats.length} seat(s) selected",
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // ✅ Boarding & Dropping Button (always visible)
+          Center(
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                await saveSelectedSeatInfo();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => BoardingDroppingPage(
+                      fromLocation: fromcity,
+                      toLocation: tocity,
+                      boardingPoints:
+                      parseBoardingPoints(widget.bus.boardingPoints),
+                      droppingPoints:
+                      parseDroppingPoints(widget.bus.droppingPoints),
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.location_on_outlined, color: Colors.white),
+              label: const Text(
+                "Select Boarding & Dropping Point",
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                backgroundColor: const Color(0xFF033564),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
 }

@@ -13,6 +13,9 @@ final Map<String, List<String>> cityMapping = {
   "goa": ["goa", "madgaon", "margao", "panaji", "panjim"],
   "madgaon": ["goa", "madgaon", "margao"],
   "margao": ["goa", "madgaon", "margao"],
+
+  "nidugundi": ["Nidugundi", "Nidagundi", "Nidgundi"],
+
   "panaji": ["goa", "panaji", "panjim"],
   "panjim": ["goa", "panaji", "panjim"],
   "pune": ["pune", "poona"],
@@ -38,8 +41,25 @@ final Map<String, List<String>> cityMapping = {
   "puducherry": ["pondicherry", "puducherry"],
 };
 
-List<String> getMappedCities(String? city) {
-  if (city == null || city.trim().isEmpty) return [];
-  final key = city.toLowerCase().trim();
-  return cityMapping[key] ?? [city];
+String normalizeCity(String city) {
+  final key = city.trim().toLowerCase();
+  if (cityMapping.containsKey(key)) {
+    return cityMapping[key]!.first;
+  }
+  return city;
+}
+
+// Returns the alternate city name for API use
+String getMappedCity(String userInput) {
+  if (userInput.trim().isEmpty) return userInput;
+
+  final key = userInput.toLowerCase().trim();
+  final mappedList = cityMapping[key] ?? [userInput];
+
+  // Flip: if user typed first element, return second; else return first
+  if (mappedList.length > 1) {
+    return mappedList[0].toLowerCase() == key ? mappedList[1] : mappedList[0];
+  } else {
+    return mappedList[0];
+  }
 }

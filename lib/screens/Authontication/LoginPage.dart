@@ -3,7 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_yesgobus/screens/Home_screen.dart';
+import 'package:flutter_application_yesgobus/screens/authontication/Home_screen.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -17,8 +17,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 // import '../authentication/signup_page.dart';
 import 'package:flutter/services.dart';
 
-import '../Service/appservice/api_urls.dart';
-import '../Service/appservice/get_store_data.dart';
+import '../../Service/appservice/api_urls.dart';
+import '../../Service/appservice/get_store_data.dart';
 import 'SignupScreen.dart';
 
 
@@ -36,6 +36,9 @@ class _LoginPageState extends State<LoginPage> {
   bool _loading = false;
   String? _requestId;
   late WebViewController _webViewController;
+  final FocusNode _mobileFocus = FocusNode();
+  final FocusNode _otpFocus = FocusNode();
+
 
 
   @override
@@ -513,6 +516,7 @@ class _LoginPageState extends State<LoginPage> {
                                         SizedBox(height: 10.h),
                                         TextField(
                                           controller: _mobileController,
+                                          focusNode: _mobileFocus,
                                           decoration: InputDecoration(
                                             labelText: "Enter Mobile Number",
                                             prefixText: "+91 ",
@@ -522,11 +526,7 @@ class _LoginPageState extends State<LoginPage> {
                                               borderRadius: BorderRadius.circular(10.r),
                                             ),
                                             focusedBorder: OutlineInputBorder(
-                                              borderSide: const BorderSide(
-                                                  color: Color(0xFF033564), width: 2),
-                                              borderRadius: BorderRadius.circular(10.r),
-                                            ),
-                                            border: OutlineInputBorder(
+                                              borderSide: const BorderSide(color: Color(0xFF033564), width: 2),
                                               borderRadius: BorderRadius.circular(10.r),
                                             ),
                                           ),
@@ -535,11 +535,19 @@ class _LoginPageState extends State<LoginPage> {
                                             FilteringTextInputFormatter.digitsOnly,
                                             LengthLimitingTextInputFormatter(10),
                                           ],
+                                          onSubmitted: (_) {
+                                            // Move focus to OTP field automatically
+                                            if (_mobileController.text.length == 10) {
+                                              FocusScope.of(context).requestFocus(_otpFocus);
+                                            }
+                                          },
                                         ),
+
                                         if (_showOtpField) ...[
                                           SizedBox(height: 12.h),
                                           TextField(
                                             controller: _otpController,
+                                            focusNode: _otpFocus,
                                             decoration: InputDecoration(
                                               labelText: "Enter OTP",
                                               border: OutlineInputBorder(
@@ -548,6 +556,7 @@ class _LoginPageState extends State<LoginPage> {
                                             ),
                                             keyboardType: TextInputType.number,
                                           ),
+
                                           SizedBox(height: 8.h),
                                           Align(
                                             alignment: Alignment.centerRight,
@@ -641,7 +650,7 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                                 SizedBox(height: 20.h),
                                 Text(
-                                  'Ver: 01.4',
+                                  'Ver: 01.7',
                                   style:
                                   TextStyle(color: Colors.white, fontSize: 14.sp),
                                 ),

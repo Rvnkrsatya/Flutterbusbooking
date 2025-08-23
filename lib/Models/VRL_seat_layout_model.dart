@@ -10,6 +10,7 @@ class SeatLayout {
   final double fare;
   final bool isSelected;
   final int blockType;
+  final double serviceTax;
 
   SeatLayout({
     required this.seatName,
@@ -23,6 +24,7 @@ class SeatLayout {
     required this.fare,
     required this.blockType,
     this.isSelected = false,
+    required this.serviceTax,
   });
 
 
@@ -41,6 +43,7 @@ class SeatLayout {
       columnSpan: columnSpan,
       fare: double.tryParse(json['SeatRate']?.toString() ?? '') ?? 0,
       blockType: int.tryParse(json['BlockType']?.toString() ?? '0') ?? 0,
+      serviceTax: (json['ServiceTax'] ?? 0).toDouble(),
 
     );
   }
@@ -74,6 +77,7 @@ class SeatLayout {
       fare: fare,
       isSelected: isSelected ?? this.isSelected,
       blockType: blockType,
+      serviceTax: serviceTax,
     );
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_application_yesgobus/screens/SplashScreen.dart';
+import 'package:flutter_application_yesgobus/screens/authontication/SplashScreen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ Add this
 import 'package:get/get.dart';
 

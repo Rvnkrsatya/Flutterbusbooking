@@ -23,19 +23,26 @@ class BoardingDroppingPage extends StatefulWidget {
   @override
   State<BoardingDroppingPage> createState() => _BoardingDroppingPageState();
 }
-
-class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
+class _BoardingDroppingPageState extends State<BoardingDroppingPage> with SingleTickerProviderStateMixin {
   String? selectedBoardingId;
   String? selectedDroppingId;
   String fromcity = '';
   String tocity = '';
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     selectedBoardingId = widget.initialBoardingId;
     selectedDroppingId = widget.initialDroppingId;
+    _tabController = TabController(length: 2, vsync: this);
     loadSharedData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose(); // ✅ Dispose TabController
+    super.dispose();
   }
 
   Future<Map<String, String>> saveBoardingDroppingInfo() async {
@@ -43,22 +50,12 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
 
     final boardingPoint = widget.boardingPoints.firstWhere(
           (point) => point['id'] == selectedBoardingId,
-      orElse: () => {
-        'id': '',
-        'location': '',
-        'time': '',
-        'contact': '',
-      },
+      orElse: () => {'id': '', 'location': '', 'time': '', 'contact': ''},
     );
 
     final droppingPoint = widget.droppingPoints.firstWhere(
           (point) => point['id'] == selectedDroppingId,
-      orElse: () => {
-        'id': '',
-        'location': '',
-        'time': '',
-        'contact': '',
-      },
+      orElse: () => {'id': '', 'location': '', 'time': '', 'contact': ''},
     );
 
     await prefs.setString('boardingId', boardingPoint['id'] ?? '');
@@ -66,15 +63,18 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
     await prefs.setString('boardingTime', boardingPoint['time'] ?? '');
     await prefs.setString('boardingContact', boardingPoint['contact'] ?? '');
 
-
     await prefs.setString('droppingId', droppingPoint['id'] ?? '');
     await prefs.setString('droppingLocation', droppingPoint['location'] ?? '');
     await prefs.setString('droppingTime', droppingPoint['time'] ?? '');
     await prefs.setString('droppingContact', droppingPoint['contact'] ?? '');
 
     debugPrint("✅ Boarding/Dropping Info Saved:");
-    debugPrint("Boarding: ${boardingPoint['location']} at ${boardingPoint['time']} (ID: ${boardingPoint['id']})");
-    debugPrint("Dropping: ${droppingPoint['location']} at ${droppingPoint['time']} (ID: ${droppingPoint['id']})");
+    debugPrint(
+      "Boarding: ${boardingPoint['location']} at ${boardingPoint['time']} (ID: ${boardingPoint['id']})",
+    );
+    debugPrint(
+      "Dropping: ${droppingPoint['location']} at ${droppingPoint['time']} (ID: ${droppingPoint['id']})",
+    );
 
     return {
       'boardingPoint': boardingPoint['location'] ?? '',
@@ -97,7 +97,6 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
     debugPrint("To: $tocity");
   }
 
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -117,21 +116,26 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
               const SizedBox(height: 2),
               Text(
                 "${fromcity} → ${tocity}",
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ],
           ),
-          bottom: const TabBar(
+          bottom: TabBar(
+            controller: _tabController,
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
             indicatorColor: Colors.white,
-            tabs: [
+            tabs: const [
               Tab(text: 'Boarding Point'),
               Tab(text: 'Dropping Point'),
             ],
           ),
         ),
         body: TabBarView(
+          controller: _tabController,
           children: [
             // Boarding Points
             _buildSelectionList(widget.boardingPoints, true),
@@ -149,7 +153,8 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => PassengerInfoScreen(
+                    builder:
+                        (_) => PassengerInfoScreen(
                       boardingId: selectedBoardingId!,
                       droppingId: selectedDroppingId!,
                       boardingpoint: points['boardingPoint'] ?? '',
@@ -162,7 +167,9 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text("Please select both boarding and dropping points"),
+                    content: Text(
+                      "Please select both boarding and dropping points",
+                    ),
                     backgroundColor: Colors.redAccent,
                   ),
                 );
@@ -177,7 +184,10 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ),
@@ -185,16 +195,17 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
     );
   }
 
-  Widget _buildSelectionList(List<Map<String, String>> points, bool isBoarding) {
+  Widget _buildSelectionList(
+      List<Map<String, String>> points,
+      bool isBoarding,
+      ) {
     final selectedId = isBoarding ? selectedBoardingId : selectedDroppingId;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Card(
         color: Colors.white,
         elevation: 4,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ListView.separated(
           itemCount: points.length,
           separatorBuilder: (_, __) => const Divider(height: 1),
@@ -224,6 +235,7 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
                     setState(() {
                       if (isBoarding) {
                         selectedBoardingId = value;
+                        _tabController.animateTo(1);
                       } else {
                         selectedDroppingId = value;
                       }
@@ -235,6 +247,7 @@ class _BoardingDroppingPageState extends State<BoardingDroppingPage> {
                   setState(() {
                     if (isBoarding) {
                       selectedBoardingId = point['id'];
+                      _tabController.animateTo(1);
                     } else {
                       selectedDroppingId = point['id'];
                     }

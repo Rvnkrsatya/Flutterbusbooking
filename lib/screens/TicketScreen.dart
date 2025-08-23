@@ -115,7 +115,7 @@ class _TicketScreenState extends State<TicketScreen> {
   Future<void> generatePDF() async {
     final pdf = pw.Document();
 // your pdf building code...
-    final pdfBytes = await pdf.save();
+//     final pdfBytes = await pdf.save();
     // Load logo image
     final ByteData data = await rootBundle.load('assets/images/yesgobuswhite.png');
     final Uint8List logoBytes = data.buffer.asUint8List();
@@ -452,7 +452,12 @@ class _TicketScreenState extends State<TicketScreen> {
         },
       ),
     );
+    final pdfBytes = await pdf.save();
 
+    // Save file to device
+    final dir = await getApplicationDocumentsDirectory();
+    final file = File("${dir.path}/ticket.pdf");
+    await file.writeAsBytes(pdfBytes);
     // Save & Print
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   }

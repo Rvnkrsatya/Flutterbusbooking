@@ -4,8 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import '../screens/LoginPage.dart';
-import '../Service/appservice/api_urls.dart';
+import '../../Service/appservice/api_urls.dart';
+import '../../screens/Authontication/LoginPage.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,13 +17,14 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  TextEditingController nameController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController phoneController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
   String selectedGender = 'Male';
 
-  String? userDbId;
-  String? Id;
+  String? userId;
+  String? userid;
+
   String? token;
 
   @override
@@ -38,16 +40,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       emailController.text = prefs.getString('user_email') ?? '';
       phoneController.text = prefs.getString('user_phone') ?? '';
       selectedGender = prefs.getString('user_gender') ?? 'Male';
-      Id = prefs.getString('_id') ?? '';
+      userId = prefs.getString('_id') ?? '';
+      userid = prefs.getString('_id') ?? '';
+
       token = prefs.getString('token') ?? '';
-      userDbId = prefs.getString('userId') ?? '';
     });
+
+    debugPrint("🔹 Loaded user info: $userId, $token");
+    debugPrint("🔹 userId $userId");
   }
 
   Future<void> _updateProfile() async {
     if (_formKey.currentState!.validate()) {
-      final url = Uri.parse(ApiUrls.updateProfile(Id!));
-      debugPrint('[API CALL] PATCH: $url');
+      if (userId == null || userId!.isEmpty) {
+        debugPrint("❌ User ID is null or empty");
+        return;
+      }
+
+      final url = Uri.parse("${ApiUrls.updateProfile}/$userid");
+      debugPrint("[API CALL] PATCH: $url");
 
       final response = await http.patch(
         url,
@@ -63,7 +74,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }),
       );
 
-      debugPrint('[RESPONSE] ${response.statusCode}: ${response.body}');
+      debugPrint("[RESPONSE] ${response.statusCode}: ${response.body}");
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
@@ -88,18 +99,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Delete Account"),
-        content: const Text("Are you sure you want to delete your account? This action cannot be undone."),
+        content: const Text(
+          "Are you sure you want to delete your account? This action cannot be undone.",
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
+          ),
         ],
       ),
     );
 
-    if (confirm == true && Id != null && token != null) {
-      final url = Uri.parse(ApiUrls.deleteProfile(Id!));
-
-      debugPrint('[API CALL] DELETE: $url');
+    if (confirm == true && userId != null && userId!.isNotEmpty) {
+      final url = Uri.parse("${ApiUrls.deleteProfile}/$userId");
+      debugPrint("[API CALL] DELETE: $url");
 
       final response = await http.delete(
         url,
@@ -109,7 +127,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         },
       );
 
-      debugPrint('[RESPONSE] ${response.statusCode}: ${response.body}');
+      debugPrint("[RESPONSE] ${response.statusCode}: ${response.body}");
 
       if (response.statusCode == 200) {
         final prefs = await SharedPreferences.getInstance();
@@ -118,7 +136,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Account deleted successfully")),
         );
-
         Get.offAll(() => const LoginPage());
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -139,10 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          "Profile",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text("Profile", style: TextStyle(color: Colors.white)),
         centerTitle: true,
       ),
       body: Column(
@@ -154,10 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF033564),
-                  Color(0xFF033564),
-                ],
+                colors: [Color(0xFF033564), Color(0xFF033564)],
               ),
               borderRadius: BorderRadius.only(
                 bottomLeft: Radius.circular(40),
@@ -187,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         color: Color(0xFF033564),
                         size: 20,
                       ),
-                    )
+                    ),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -210,22 +221,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: ListView(
                   children: [
                     _buildTextField(
-                      controller: nameController,
-                      label: "Full Name",
-                      icon: Icons.person,
-                    ),
+                        controller: nameController, label: "Full Name", icon: Icons.person),
                     _buildTextField(
-                      controller: emailController,
-                      label: "Email",
-                      icon: Icons.email,
-                      keyboardType: TextInputType.emailAddress,
-                    ),
+                        controller: emailController,
+                        label: "Email",
+                        icon: Icons.email,
+                        keyboardType: TextInputType.emailAddress),
                     _buildTextField(
-                      controller: phoneController,
-                      label: "Phone",
-                      icon: Icons.phone,
-                      keyboardType: TextInputType.phone,
-                    ),
+                        controller: phoneController,
+                        label: "Phone",
+                        icon: Icons.phone,
+                        keyboardType: TextInputType.phone),
                     const SizedBox(height: 10),
                     DropdownButtonFormField<String>(
                       decoration: InputDecoration(
@@ -281,7 +287,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -298,8 +304,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
-        validator: (value) =>
-        value == null || value.isEmpty ? 'Enter $label' : null,
+        validator: (value) => value == null || value.isEmpty ? 'Enter $label' : null,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),

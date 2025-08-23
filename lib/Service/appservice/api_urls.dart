@@ -7,12 +7,13 @@ class ApiUrls {
   static String searchCity(String query) =>
       "${baseUrl}busBooking/searchCity/$query";
 
-  static String updateProfile(String Id) =>
-      "${baseUrl}user/updateProfile/$Id";
-
-  static String deleteProfile(String Id) =>
-      "${baseUrl}user/$Id";
-
+  // static String updateProfile(String Id) =>
+  //     "${baseUrl}user/updateProfile/$Id";
+  //
+  // static String deleteProfile(String Id) =>
+  //     "${baseUrl}user/$Id";
+  static const String updateProfile = "https://apis.yesgobus.com/api/user/updateProfile";
+  static const String deleteProfile = "https://apis.yesgobus.com/api/user";
   // Auth Endpoints
   static const String signIn = "${baseUrl}user/signin";
   static const String verifyOtp = "${baseUrl}user/verify_login_otp";
@@ -23,39 +24,29 @@ class ApiUrls {
   static const String verifyOtpsign = '${baseUrl}user/verify_signup_otp';
   static const String getQueries = "${baseUrl}query/getQueries";
   static const String createQuery = "${baseUrl}query/createQuery";
-  static const String vrlbusdetails = "busBooking/getVrlBusDetails";
+  // static const String vrlbusdetails = "busBooking/getVrlBusDetails";
   static const String getbookingbyid = "busBooking/getBookingById";
 
-
-  // static const String vrlbusdetails = "busBooking/getVrlBusDetails";
-
-  // static const String srsbusdetails = "busBooking/getSrsSchedules/hubli/bangalore/2025-07-28";
-
-
-  // static const String getVrlSeatLayout = "busBooking/sendVrlRequest/GetSeatArrangementDetailsV3";
-  // static const String getSrsSeatLayout = "busBooking/getSrsSeatDetails/";
-  static const String vrlbusdetailsV2 = "vrlbusdetailsver2";
-  static const String getVrlSeatLayout = "getVrlSeatLayout";
-  static const String vrlbusdetailsById = "vrl/v1/buses";
-  static const String vrlbusdetailsV3 = "vrl/v3/buses";
-
-
-  // ================= SRS APIs =================
-  static const String srsbusdetailsById = "srs/v1/buses";
-  static const String srsbusdetailsV3 = "srs/v3/buses";
-
-  // ✅ SRS API endpoints
-  static const String srsbusdetailsV2 = "srsbusdetailsver2";
-  static const String getSrsSeatLayout = "getSrsSeatLayout/";
-  // ✅ Remove hardcoded cities/date — use base path
-  static const String srsbusdetailsBase = "busBooking/getSrsSchedules";
-  static const String srsbusdetails = "busBooking/getSrsSchedules";
+  static const String getVrlSeatLayout = "busBooking/sendVrlRequest/GetSeatArrangementDetailsV3";
+  static const String getSrsSeatLayout = "busBooking/getSrsSeatDetails/";
   static const String vrlblockseat = "busBooking/sendVrlRequest/BlockSeatV2";
+  static const String vrlbookseat = "busBooking/bookBus";
   static const String srsblockseat = "busBooking/getSrsBlockSeat";
   static const String srsbookseat = "busBooking/bookBus";
   static const String getkey = "getkey";
   static const String checkout = "payment/v2/checkout";
   static const String verificationApiUrl = "https://apis.yesgobus.com/api/payment/v2/paymentverification";
+  // static const String getbookingbyid = "busBooking/getBookingById";
+  static const String checkagent = "agent/isAgent";
+  static const String agentbusbooking = "agent/busbooking";
+  static const String srsFiltersV3 =  "busBooking/getSrsFiltersV3";
+  static const String srsFiltersV2 =  "busBooking/getSrsFiltersV2";
+
+  static const String srsSchedulesV2 = "busBooking/getSrsSchedulesV2";
+  static const String vrlbusdetailsV2 = "busBooking/getVrlBusDetailsV2";
+  static const String vrlbusdetailsv3 = "busBooking/getVrlBusDetailsV3";
+
+  static const String srsbusdetailsv3 = "busBooking/getSrsSchedulesV3";
 
 }
 

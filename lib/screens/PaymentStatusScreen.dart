@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_yesgobus/Service/appservice/apibase.dart';
-import 'package:flutter_application_yesgobus/screens/Home_screen.dart';
+import 'package:flutter_application_yesgobus/screens/authontication/Home_screen.dart';
 import 'package:flutter_application_yesgobus/screens/TicketScreen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import '../Pages/bus_list_page.dart';
 import '../utils/png_asset_constant.dart';
 
 class PaymentStatusScreen extends StatefulWidget {
@@ -142,6 +143,15 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
               );
             },
             child: Text('Home'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => BusListPage()),
+              );
+            },
+            child: Text('Bus List'),
           ),
         ],
       ),

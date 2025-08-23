@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_yesgobus/screens/Home_screen.dart';
+import 'package:flutter_application_yesgobus/screens/authontication/Home_screen.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:get/get.dart';
@@ -8,7 +8,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../Service/appservice/api_urls.dart';
+import '../../Service/appservice/api_urls.dart';
 import 'LoginPage.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -22,6 +22,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _mobileController = TextEditingController();
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
+  String? id;
 
   String? _gender;
   String _requestId = '';
@@ -132,6 +133,10 @@ class _SignupScreenState extends State<SignupScreen> {
         }),
       );
 
+      // ✅ Print raw response for debugging
+      print("🔵 Verify OTP Response Status: ${response.statusCode}");
+      print("🔵 Verify OTP Response Body: ${response.body}");
+
       setState(() => _loading = false);
       final data = jsonDecode(response.body);
       final message = data['message'] ?? '';
@@ -145,6 +150,8 @@ class _SignupScreenState extends State<SignupScreen> {
         await prefs.setString('user_fullName', user['fullName'] ?? '');
         await prefs.setString('user_email', user['email'] ?? '');
         await prefs.setString('user_phone', user['phoneNumber'] ?? '');
+        await prefs.setString('user_gender', _gender ?? ''); // ✅ Save gender
+        await prefs.setString('_id', id ?? ''); // ✅ Save gender
 
         _showSuccess("Welcome to YesGoBus, ${user['fullName']}!");
 
@@ -157,18 +164,27 @@ class _SignupScreenState extends State<SignupScreen> {
       }
     } catch (e) {
       setState(() => _loading = false);
+      print("❌ Verify OTP Error: $e");
       _showError("Unexpected error. Please try again.");
     }
   }
 
   void _showError(String msg) {
-    Get.snackbar('Error', msg,
-        backgroundColor: Colors.red, colorText: Colors.white);
+    Get.snackbar(
+      'Error',
+      msg,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+    );
   }
 
   void _showSuccess(String msg) {
-    Get.snackbar('Success', msg,
-        backgroundColor: Colors.green, colorText: Colors.white);
+    Get.snackbar(
+      'Success',
+      msg,
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+    );
   }
 
   InputDecoration _inputDecoration(String label, {String? prefixText}) {
@@ -196,9 +212,12 @@ class _SignupScreenState extends State<SignupScreen> {
           });
           return false;
         } else {
+          // Navigate to LoginPage
           Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (_) => LoginPage()));
-          return false;
+            context,
+            MaterialPageRoute(builder: (_) => LoginPage()),
+          );
+          return false; // Prevent default back behavior
         }
       },
       child: Scaffold(
@@ -212,7 +231,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     Color(0xFF033564),
                     Color(0xFF033564),
                     Color(0xFF14bde3),
-                    Color(0xFF033564)
+                    Color(0xFF033564),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -223,7 +242,9 @@ class _SignupScreenState extends State<SignupScreen> {
               child: Center(
                 child: SingleChildScrollView(
                   padding: EdgeInsets.symmetric(
-                      horizontal: isTablet ? 100 : 20, vertical: 20),
+                    horizontal: isTablet ? 100 : 20,
+                    vertical: 20,
+                  ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(20),
                     child: BackdropFilter(
@@ -233,18 +254,27 @@ class _SignupScreenState extends State<SignupScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withOpacity(0.2)),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                          ),
                         ),
                         child: Form(
                           key: _formKey,
                           autovalidateMode: AutovalidateMode.onUserInteraction,
                           child: Column(
                             children: [
-                              Image.asset('assets/images/yesgobuswhite.png', height: 100),
+                              Image.asset(
+                                'assets/images/yesgobuswhite.png',
+                                height: 100,
+                              ),
                               const SizedBox(height: 10),
                               const Text(
                                 'Create an Account',
-                                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
                               ),
                               const SizedBox(height: 20),
                               TextFormField(
@@ -254,32 +284,54 @@ class _SignupScreenState extends State<SignupScreen> {
                               const SizedBox(height: 10),
                               TextFormField(
                                 controller: _mobileController,
-                                decoration: _inputDecoration('Mobile Number', prefixText: '+91 '),
+                                decoration: _inputDecoration(
+                                  'Mobile Number',
+                                  prefixText: '+91 ',
+                                ),
                                 keyboardType: TextInputType.phone,
-                                validator: (value) => value!.length != 10 ? 'Enter valid mobile number' : null,
+                                validator:
+                                    (value) =>
+                                        value!.length != 10
+                                            ? 'Enter valid mobile number'
+                                            : null,
                               ),
                               const SizedBox(height: 10),
                               TextFormField(
                                 controller: _emailController,
                                 decoration: _inputDecoration('Email'),
                                 keyboardType: TextInputType.emailAddress,
-                                validator: (value) => value!.isEmpty || !value.contains('@') ? 'Enter valid email' : null,
+                                validator:
+                                    (value) =>
+                                        value!.isEmpty || !value.contains('@')
+                                            ? 'Enter valid email'
+                                            : null,
                               ),
                               const SizedBox(height: 10),
                               DropdownButtonFormField<String>(
                                 dropdownColor: Colors.white,
                                 decoration: _inputDecoration('Gender'),
-                                items: ['Male', 'Female', 'Other']
-                                    .map((value) => DropdownMenuItem(
-                                    value: value, child: Text(value)))
-                                    .toList(),
-                                onChanged: (value) => setState(() => _gender = value),
-                                validator: (value) => value == null ? 'Select gender' : null,
+                                items:
+                                    ['Male', 'Female', 'Other']
+                                        .map(
+                                          (value) => DropdownMenuItem(
+                                            value: value,
+                                            child: Text(value),
+                                          ),
+                                        )
+                                        .toList(),
+                                onChanged:
+                                    (value) => setState(() => _gender = value),
+                                validator:
+                                    (value) =>
+                                        value == null ? 'Select gender' : null,
                               ),
                               const SizedBox(height: 10),
                               const Text(
                                 'By continuing, I agree to the Terms of Use & Privacy Policy',
-                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                               if (_showOtpField) ...[
@@ -288,28 +340,41 @@ class _SignupScreenState extends State<SignupScreen> {
                                   controller: _otpController,
                                   decoration: _inputDecoration("Enter OTP"),
                                   keyboardType: TextInputType.number,
-                                  validator: (value) => value!.length < 4 ? "Enter valid OTP" : null,
+                                  validator:
+                                      (value) =>
+                                          value!.length < 4
+                                              ? "Enter valid OTP"
+                                              : null,
                                 ),
                                 const SizedBox(height: 10),
                                 TextButton(
                                   onPressed: _loading ? null : _createAccount,
                                   child: const Text(
                                     "Resend OTP",
-                                    style: TextStyle(color: Color(0xFF033564), fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      color: Color(0xFF033564),
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ],
                               const SizedBox(height: 20),
                               ElevatedButton(
-                                onPressed: _loading
-                                    ? null
-                                    : _showOtpField
-                                    ? _verifyOtp
-                                    : _createAccount,
+                                onPressed:
+                                    _loading
+                                        ? null
+                                        : _showOtpField
+                                        ? _verifyOtp
+                                        : _createAccount,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF033564),
-                                  padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 80,
+                                    vertical: 14,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
                                 ),
                                 child: Text(
                                   _loading
@@ -317,7 +382,10 @@ class _SignupScreenState extends State<SignupScreen> {
                                       : _showOtpField
                                       ? "Verify OTP"
                                       : "Signup",
-                                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ],
@@ -328,7 +396,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),

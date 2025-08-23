@@ -1,17 +1,18 @@
 import 'package:dio/dio.dart' as dio;
 import 'package:flutter/material.dart';
-import 'package:flutter_application_yesgobus/widgets/ContactUsScreen.dart';
-import 'package:flutter_application_yesgobus/widgets/Mybooking.dart';
-import 'package:flutter_application_yesgobus/widgets/TermsScreen.dart';
+
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../Pages/bus_list_page.dart';
-import '../screens/LoginPage.dart';
-import '../Service/appservice/api_urls.dart';
-import '../Service/appservice/get_store_data.dart';
+import '../../Pages/bus_list_page.dart';
+import '../../Service/appservice/api_urls.dart';
+
+import '../../screens/Authontication/LoginPage.dart';
+import 'ContactUsScreen.dart';
+import 'Mybooking.dart';
 import 'Privacy.dart';
 import 'ProfileScreen.dart';
+import 'TermsScreen.dart';
 
 
 class ProfileDrawer extends StatefulWidget {

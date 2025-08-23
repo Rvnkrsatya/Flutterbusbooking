@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_yesgobus/screens/Tourplace.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,13 +6,19 @@ import 'package:translator/translator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:ui';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../Pages/bus_list_page.dart';
-import '../widgets/ProfileScreen.dart';
-import '../widgets/nav_bar.dart';
-import 'LocationSelectorScreen.dart';
-import '../widgets/ProfileDrawer.dart';
-import 'OffersSection.dart';
-import 'RateUsSection.dart';
+import '../../Pages/bus_list_page.dart';
+import '../../Service/appservice/get_store_data.dart';
+
+import '../../widgets/Navsection/Mybooking.dart';
+import '../../widgets/Navsection/ProfileDrawer.dart';
+import '../../widgets/Navsection/ProfileScreen.dart';
+import '../../widgets/Navsection/nav_bar.dart';
+import '../Homesubpage/LocationSelectorScreen.dart';
+import '../Homesubpage/OffersSection.dart';
+import '../Homesubpage/RateUsSection.dart';
+import '../Homesubpage/Tourplace.dart';
+
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String tTo = '';
   String tSearch = 'Search Buses';
   int _selectedIndex = 0;
+  List<List<String>> _history = [];
 
   void _swapCities() {
     setState(() {
@@ -46,6 +52,39 @@ class _HomeScreenState extends State<HomeScreen> {
       _fromCity = _toCity;
       _toCity = temp;
     });
+  }
+
+  Future<void> _storeSearchData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!);
+
+    // Save the latest search
+    await prefs.setString('fromCity', _fromCity);
+    await prefs.setString('toCity', _toCity);
+    await prefs.setString('selectedDate', formattedDate);
+
+    // Update history list
+    final newSearch = [_fromCity, _toCity, formattedDate];
+    List<String> savedHistory = prefs.getStringList('recentSearches') ?? [];
+
+    // Add at beginning & remove duplicates
+    savedHistory.remove(newSearch.join('|'));
+    savedHistory.insert(0, newSearch.join('|'));
+
+    // Keep only last 5
+    if (savedHistory.length > 5) savedHistory = savedHistory.sublist(0, 5);
+
+    await prefs.setStringList('recentSearches', savedHistory);
+
+    print("✅ Stored recent search: $newSearch");
+  }
+
+  // 🔹 Load Recent Searches
+  Future<List<List<String>>> loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedHistory = prefs.getStringList('recentSearches') ?? [];
+
+    return savedHistory.map((item) => item.split('|')).toList();
   }
 
   void _pickDateFromCalendar() async {
@@ -84,8 +123,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   String _formatDate(DateTime date) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
     return "${_weekdayString(date.weekday)}, ${date.day}-${months[date.month - 1]}";
   }
 
@@ -103,39 +154,23 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _storeSearchData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate!); // 👈 Format the date
-
-    await prefs.setString('fromCity', _fromCity);
-    await prefs.setString('toCity', _toCity);
-    await prefs.setString('selectedDate', formattedDate); // 👈 Store in dd/MM/yyyy
-    print('✅ Stored: $_fromCity → $_toCity on $formattedDate');
-  }
-
-  Future<void> _loadSearchData() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _fromCity = prefs.getString('fromCity') ?? 'From';
-      _toCity = prefs.getString('toCity') ?? 'To';
-      final dateStr = prefs.getString('selectedDate');
-      if (dateStr != null) {
-        _selectedDate = DateTime.tryParse(dateStr) ?? DateTime.now();
-      }
-    });
-  }
   @override
   void initState() {
     super.initState();
+    _printUserData();
+    // Translate labels (if using Google Translate / translator package)
     _translateLabels(_selectedLanguage);
+
+    // Load recent searches
+    loadRecentSearches().then((data) {
+      setState(() {
+        _history = data;
+      });
+    });
   }
-
-  @override
-
-
-
-
+  Future<void> _printUserData() async {
+    await GetStoreData.printUserData(); // uses your class method
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -152,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _buildHeader(),
                 SizedBox(height: 10.h),
-                _buildHistorySection(),
+                _buildHistorySection(_history),
                 SizedBox(height: 20.h),
                 RateUsSection(),
                 SizedBox(height: 20.h),
@@ -160,7 +195,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 SizedBox(height: 30.h),
                 Tourplace(),
                 SizedBox(height: 20.h),
-
               ],
             ),
           ),
@@ -248,7 +282,10 @@ class _HomeScreenState extends State<HomeScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(color: Colors.white.withOpacity(0.3), width: 1.w),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 1.w,
+                ),
               ),
               child: Column(
                 children: [
@@ -262,14 +299,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const LocationSelectorScreen(title: "From"),
+                                builder:
+                                    (_) => const LocationSelectorScreen(
+                                      title: "From",
+                                    ),
                               ),
                             );
                             if (result != null) {
                               setState(() => _fromCity = result);
                             }
                           },
-                          child: Text(" $_fromCity", style: TextStyle(fontSize: 16.sp)),
+                          child: Text(
+                            " $_fromCity",
+                            style: TextStyle(fontSize: 16.sp),
+                          ),
                         ),
                       ),
                     ],
@@ -284,8 +327,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Container(
                           width: 30.w,
                           height: 30.w,
-                          decoration: const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
-                          child: const Icon(Icons.swap_vert, color: Colors.white),
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.swap_vert,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
@@ -301,14 +350,20 @@ class _HomeScreenState extends State<HomeScreen> {
                             final result = await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const LocationSelectorScreen(title: "To"),
+                                builder:
+                                    (_) => const LocationSelectorScreen(
+                                      title: "To",
+                                    ),
                               ),
                             );
                             if (result != null) {
                               setState(() => _toCity = result);
                             }
                           },
-                          child: Text(" $_toCity", style: TextStyle(fontSize: 16.sp)),
+                          child: Text(
+                            " $_toCity",
+                            style: TextStyle(fontSize: 16.sp),
+                          ),
                         ),
                       ),
                     ],
@@ -321,7 +376,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: GestureDetector(
                           onTap: _pickDateFromCalendar,
                           child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 8.w),
+                            padding: EdgeInsets.symmetric(
+                              vertical: 8.h,
+                              horizontal: 8.w,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.2),
                               borderRadius: BorderRadius.circular(8.r),
@@ -331,10 +389,17 @@ class _HomeScreenState extends State<HomeScreen> {
                               children: [
                                 Text(
                                   _formatDate(_selectedDate ?? DateTime.now()),
-                                  style: TextStyle(fontSize: 16.sp, color: Colors.black),
+                                  style: TextStyle(
+                                    fontSize: 16.sp,
+                                    color: Colors.black,
+                                  ),
                                 ),
                                 SizedBox(width: 10.w),
-                                const Icon(Icons.calendar_today, size: 18, color: Colors.black),
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 18,
+                                  color: Colors.black,
+                                ),
                               ],
                             ),
                           ),
@@ -363,13 +428,13 @@ class _HomeScreenState extends State<HomeScreen> {
               elevation: 0,
             ),
             onPressed: () async {
-              if (_fromCity != 'From' && _toCity != 'To' && _selectedDate != null) {
+              if (_fromCity != 'From' &&
+                  _toCity != 'To' &&
+                  _selectedDate != null) {
                 await _storeSearchData();
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => BusListPage(),
-                  ),
+                  MaterialPageRoute(builder: (context) => BusListPage()),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -414,55 +479,106 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildHistorySection(List<List<String>> history) {
+    if (history.isEmpty) return SizedBox();
 
-  Widget _buildHistorySection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           child: Text(
-            'History',
+            'Recent Searches',
             style: TextStyle(
-              fontSize: 16.sp,
+              fontSize: 18.sp,
               fontWeight: FontWeight.bold,
-              color: Colors.black.withOpacity(0.7),
+              color: Colors.black.withOpacity(0.8),
             ),
           ),
         ),
-        SizedBox(height: 8.h),
+        SizedBox(height: 12.h),
         SizedBox(
-          height: 70.h,
+          height: 80.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.symmetric(horizontal: 12.w),
-            itemCount: 10,
+            itemCount: history.length,
             itemBuilder: (context, index) {
-              return Container(
-                width: 130.w,
-                margin: EdgeInsets.only(right: 12.w),
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFeaf7fd),
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: const Color(0xFF033564)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Karwar  Hubli",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14.sp,
-                          color: const Color(0xFF033564),
-                        )),
-                    SizedBox(height: 1.h),
-                    Text("24 July 25",
+              final item = history[index]; // ["From", "To", "Date"]
+
+              // Format the date
+              String formattedDate = item[2];
+              try {
+                final date = DateTime.parse(item[2]);
+                formattedDate = DateFormat('dd MMM yyyy').format(date);
+              } catch (e) {
+                // If parsing fails, keep original
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    "/busList",
+                    arguments: {
+                      "from": item[0],
+                      "to": item[1],
+                      "date": item[2],
+                    },
+                  );
+                },
+                child: Container(
+                  constraints: BoxConstraints(minWidth: 140.w, maxWidth: 220.w),
+                  margin: EdgeInsets.only(right: 12.w),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 8.w,
+                    vertical: 10.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFeaf7fd),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(
+                      color: const Color(0xFF033564),
+                      width: 1.5.w,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 6.r,
+                        offset: Offset(2.w, 4.h),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              "${item[0]} → ${item[1]}",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16.sp,
+                                color: Color(0xFF033564),
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6.h),
+                      Text(
+                        formattedDate,
                         style: TextStyle(
                           fontSize: 13.sp,
-                          color: const Color(0xFF033564),
-                        )),
-                  ],
+                          color: Colors.grey[900],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },
@@ -499,7 +615,7 @@ class _HomeScreenState extends State<HomeScreen> {
             case 0:
               break;
             case 1:
-              Navigator.pushNamed(context, '/busBooking');
+              Get.to(() => const Mybooking());
               break;
             case 2:
               launchCallNow('1800123456');
@@ -511,8 +627,14 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.directions_bus), label: 'Bus Booking'),
-          BottomNavigationBarItem(icon: Icon(Icons.call), label: 'Call to Book'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.directions_bus),
+            label: 'My Booking',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.call),
+            label: 'Call to Book',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
@@ -523,9 +645,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return ElevatedButton(
       onPressed: () {
         setState(() {
-          _selectedDate = tag == 'today'
-              ? DateTime.now()
-              : DateTime.now().add(const Duration(days: 1));
+          _selectedDate =
+              tag == 'today'
+                  ? DateTime.now()
+                  : DateTime.now().add(const Duration(days: 1));
           _selectedDayTag = tag;
         });
       },

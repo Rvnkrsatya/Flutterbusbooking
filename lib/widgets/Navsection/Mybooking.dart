@@ -5,10 +5,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../Service/appservice/api_urls.dart';
-import '../Service/appservice/apibase.dart';
-import '../screens/CancelTicketPage.dart';
-import '../screens/TicketScreen.dart'; // for date parsing
+import '../../Service/appservice/api_urls.dart';
+import '../../Service/appservice/apibase.dart';
+import '../../screens/CancelTicketPage.dart';
+import '../../screens/TicketScreen.dart';
+
+ // for date parsing
 
 
 class Mybooking extends StatefulWidget {
@@ -35,9 +37,9 @@ class _MybookingState extends State<Mybooking> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      // final userId = prefs.getString('_id');
-      final userId = "64f9eae480a5869e9ea0c8af" ;
-      // print("🔵 Fetching bookings for userId: $userId");
+      final userId = prefs.getString('_id');
+      // final userId = "64f9eae480a5869e9ea0c8af" ;
+       print("🔵 Fetching bookings for userId: $userId");
       //
       // final response = await ApiBase.getRequest(
       //   extendedURL: "busBooking/getAllBookings/$userId", withToken: true,
